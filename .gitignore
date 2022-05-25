@@ -1,0 +1,8 @@
+*.class
+*.bsp/
+*.log
+target/
+project/target/
+.idea/
+*.ipr
+*.iws
