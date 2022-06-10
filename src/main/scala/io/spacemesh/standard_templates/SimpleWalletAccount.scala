@@ -1,6 +1,6 @@
 package io.spacemesh.standard_templates
 
-import io.spacemesh.platform.{AccountAddress, Nonce, ParsedTxPayload, Template, TemplateAddress, Transaction}
+import io.spacemesh.platform.{AccountAddress, FFI, Nonce, ParsedTxPayload, Template, TemplateAddress, TokensAmount, Transaction}
 
 object SimpleWalletAccount {
 
@@ -8,7 +8,7 @@ object SimpleWalletAccount {
 
   }
 
-  class Logic(s: ImmutableState, host: FFI) extends Template[ImmutableState](s, host) {
+  class Logic(account: AccountAddress, s: ImmutableState, host: FFI) extends Template[ImmutableState](account, s, host) {
     private var nonceValue: Nonce = Nonce.zero
 
     override def nonce: Nonce = nonceValue
@@ -20,6 +20,10 @@ object SimpleWalletAccount {
     override def relayCall(targetAccount: AccountAddress, method: Byte, methodArgs: Array[Byte]): Unit = ???
 
     override def spawn[T](template: TemplateAddress, immutableState: T): AccountAddress = ???
+
+    override def transfer(destination: AccountAddress, amount: TokensAmount): Unit = ???
+
+    override def balance(): TokensAmount = ???
   }
 
 }

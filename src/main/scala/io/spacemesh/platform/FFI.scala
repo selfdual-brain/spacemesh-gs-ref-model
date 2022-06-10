@@ -18,6 +18,12 @@ trait FFI {
    */
   def transfer(destination: AccountAddress, amount: TokensAmount): Unit
 
+  def call(targetAccount: AccountAddress, method: Byte, methodArgs: Array[Byte]): Unit
+  
+  def spawnNewAccount[T](template: TemplateAddress, immutableState: T): AccountAddress
+  
+  def deployNewTemplate(): Unit
+
   /**
    * Layer number of the block in the context of which the current transaction is being executed.
    * In other words it is height of the block since Genesis (Genesis block is layer 0).
