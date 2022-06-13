@@ -52,12 +52,6 @@ trait FFI {
    */
   def callStack(): Seq[(AccountAddress, Byte)]
 
-  /**
-   *
-   * @return
-   */
-  def tokensReceivedMap(): Map[AccountAddress, TokensAmount]
-
   def log(msg: String, code: Long): Unit
 
 }

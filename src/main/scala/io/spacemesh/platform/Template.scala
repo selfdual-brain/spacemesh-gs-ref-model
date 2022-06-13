@@ -5,9 +5,6 @@ import io.spacemesh.platform.TemplateMethodVisibility.*
 abstract class Template[S](account: AccountAddress, immutableState: S, host: FFI) {
 
   @internal @query
-  def nonce: Nonce 
-
-  @internal @query
   def parsePayload(tx: Transaction): ParsedTxPayload
 
   @internal @query
@@ -30,4 +27,8 @@ abstract class Template[S](account: AccountAddress, immutableState: S, host: FFI
 
   @api(selector = 4) @query
   def balance(): TokensAmount = host.balance()
+  
+  protected def abortTransaction(msg: String): Unit = {
+    throw new TxAbort(account, msg)
+  }
 }
