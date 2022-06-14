@@ -1,5 +1,7 @@
 package io.spacemesh.platform
 
+import io.spacemesh.platform.TxReceipt
+
 abstract class TxExecutor(vm: VirtualMachine) {
 
   def execute(gs: GlobalState, tx: Transaction, parsedPayload: ParsedTxPayload, currentGasPrice: GasPrice, tx1kilobyteCost: Gas): (GlobalState, TxReceipt) = {
@@ -23,6 +25,9 @@ abstract class TxExecutor(vm: VirtualMachine) {
       val receipt: TxReceipt = TxReceipt.GasLimitNotCoveredBySponsorAccountBalance(gasBurned = gasAmountChargedForConsensus, feeCharged = totalFee)
       return (newGlobalState, receipt)
     }
+
+    //todo finish this
+    return (gs, TxReceipt.Success(1,1))
 
     //execute transaction
     

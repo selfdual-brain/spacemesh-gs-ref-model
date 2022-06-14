@@ -2,7 +2,7 @@ package io.spacemesh.platform
 
 import io.spacemesh.platform.TemplateMethodVisibility.*
 
-abstract class Account[S](address: AccountAddress, immutableState: S, host: FFI) {
+abstract class Account[S](address: AccountAddress, immutableState: S, host: FFI) extends CloningSupport[Account[S]] {
 
   @internal @query
   def parsePayload(tx: Transaction): ParsedTxPayload
@@ -36,5 +36,10 @@ abstract class Account[S](address: AccountAddress, immutableState: S, host: FFI)
 
   protected def createEmpty(): Account[S]
 
+  override def createDetachedCopy(): Account[S] = {
+    val result = createEmpty()
+    this.copyTo(result)
+    return result
+  }
 
 }

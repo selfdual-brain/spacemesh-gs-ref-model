@@ -9,9 +9,6 @@ object SimpleWalletAccount {
   }
 
   class Logic(account: AccountAddress, s: ImmutableState, host: FFI) extends Account[ImmutableState](account, s, host) {
-    private var nonceValue: Nonce = Nonce.zero
-
-    override def nonce: Nonce = nonceValue
 
     override def parsePayload(tx: Transaction): ParsedTxPayload = ???
 
@@ -24,6 +21,10 @@ object SimpleWalletAccount {
     override def transfer(destination: AccountAddress, amount: TokensAmount): Unit = ???
 
     override def balance(): TokensAmount = ???
+
+    override protected def copyTo(account: Account[ImmutableState]): Unit = ???
+
+    override protected def createEmpty(): Account[ImmutableState] = ???
   }
 
 }
