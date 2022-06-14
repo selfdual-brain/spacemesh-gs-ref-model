@@ -1,6 +1,6 @@
 package io.spacemesh.standard_templates
 
-import io.spacemesh.platform.{AccountAddress, FFI, Nonce, ParsedTxPayload, Template, TemplateAddress, TokensAmount, Transaction}
+import io.spacemesh.platform.{AccountAddress, FFI, Nonce, ParsedTxPayload, Account, TemplateAddress, TokensAmount, Transaction}
 
 object SimpleWalletAccount {
 
@@ -8,7 +8,7 @@ object SimpleWalletAccount {
 
   }
 
-  class Logic(account: AccountAddress, s: ImmutableState, host: FFI) extends Template[ImmutableState](account, s, host) {
+  class Logic(account: AccountAddress, s: ImmutableState, host: FFI) extends Account[ImmutableState](account, s, host) {
     private var nonceValue: Nonce = Nonce.zero
 
     override def nonce: Nonce = nonceValue

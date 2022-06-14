@@ -5,6 +5,8 @@ type Gas = Long
 type GasPrice = Long
 type LayerId = Long
 
+type Template[S] = (AccountAddress, S, FFI) => Account[S]
+
 /**
  * Annotation for marking "read-only" methods of a template (aka "getter" in Ethereum).
  * Such a method is not allowed to modify global state.
