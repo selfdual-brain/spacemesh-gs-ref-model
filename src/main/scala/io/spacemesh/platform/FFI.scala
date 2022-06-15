@@ -18,11 +18,36 @@ trait FFI {
    */
   def transfer(destination: AccountAddress, amount: TokensAmount): Unit
 
-  def call(targetAccount: AccountAddress, method: Byte, methodArgs: Array[Byte]): Unit
-  
-  def spawnNewAccount[T](template: TemplateAddress, immutableState: T): AccountAddress
-  
-  def deployNewTemplate(): Unit
+  /**
+   * Executes template method call.
+   * Caution: target method must have @api visibility (otherwise TxAbort will be thrown).
+   *
+   * @param targetAccount address of the receiver (account)
+   * @param method method index
+   * @param methodArgs invocation arguments (to be passed as input to target method)
+   * @tparam R the result will be type-casted do this type
+   * @return return value from the method
+   */
+  def call[R](targetAccount: AccountAddress, method: Byte, methodArgs: Array[Byte]): R
+
+  /**
+   * Creates new account (as an instance of given template).
+   *
+   * @param template template to be used for the new account
+   * @param immutableState immutable state (passed to the constructor of the account)
+   * @tparam S type of immutable state
+   * @return address of the newly-created account
+   */
+  def spawnNewAccount[S](template: TemplateAddress, immutableState: S): AccountAddress
+
+  /**
+   * Registers new template.
+   *
+   * @param template template definition
+   * @tparam S type of immutable state for accounts derived from this template
+   * @return
+   */
+  def deployNewTemplate[S](template: Template[S]): TemplateAddress
 
   /**
    * Layer number of the block in the context of which the current transaction is being executed.
@@ -52,6 +77,13 @@ trait FFI {
    */
   def callStack(): Seq[(AccountAddress, Byte)]
 
+  /**
+   * Smart-contract level logging.
+   * How this logging is handled (storage, presentation) is within engine responsibility.
+   *
+   * @param msg message
+   * @param code business-level code (not to be interpreted by the engine)
+   */
   def log(msg: String, code: Long): Unit
 
 }
