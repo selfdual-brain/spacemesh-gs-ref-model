@@ -21,12 +21,12 @@ abstract class Account[S](address: AccountAddress, immutableState: S, host: FFI)
   }
 
   @local(selector = 3)
-  def transfer(destination: AccountAddress, amount: TokensAmount): Unit = {
+  def transfer(destination: AccountAddress, amount: Ether): Unit = {
     host.transfer(destination, amount)
   }
 
   @api(selector = 4) @query
-  def balance(): TokensAmount = host.balance()
+  def balance(): Ether = host.balance()
 
   protected def abortTransaction(msg: String): Unit = {
     throw new TxAbort(address, msg)

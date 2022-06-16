@@ -16,7 +16,7 @@ trait FFI {
    * @param destination account where to transfer tokens to
    * @param amount amount of tokens to be transferred.
    */
-  def transfer(destination: AccountAddress, amount: TokensAmount): Unit
+  def transfer(destination: AccountAddress, amount: Ether): Unit
 
   /**
    * Executes template method call.
@@ -57,10 +57,15 @@ trait FFI {
   def layerId(): LayerId
 
   /**
-   * The current native tokens balance of the caller.
+   * Current coins balance of the caller.
    */
-  def balance(): TokensAmount
+  def balance(): Ether
 
+  /**
+   * Current nonce value of the caller.
+   */
+  def nonce(): Nonce
+  
   /**
    * Principal of the current transaction.
    */

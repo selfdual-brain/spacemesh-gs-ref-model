@@ -1,6 +1,6 @@
 package io.spacemesh.platform
 
-type TokensAmount = Long
+type Ether = Long
 type Gas = Long
 type GasPrice = Long
 type LayerId = Long

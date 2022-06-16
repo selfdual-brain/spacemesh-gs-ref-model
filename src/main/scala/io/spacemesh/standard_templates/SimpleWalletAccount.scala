@@ -1,6 +1,6 @@
 package io.spacemesh.standard_templates
 
-import io.spacemesh.platform.{AccountAddress, FFI, Nonce, ParsedTxPayload, Account, TemplateAddress, TokensAmount, Transaction}
+import io.spacemesh.platform.{AccountAddress, FFI, Nonce, ParsedTxPayload, Account, TemplateAddress, Ether, Transaction}
 
 object SimpleWalletAccount {
 
@@ -18,9 +18,9 @@ object SimpleWalletAccount {
 
     override def spawn[T](template: TemplateAddress, immutableState: T): AccountAddress = ???
 
-    override def transfer(destination: AccountAddress, amount: TokensAmount): Unit = ???
+    override def transfer(destination: AccountAddress, amount: Ether): Unit = ???
 
-    override def balance(): TokensAmount = ???
+    override def balance(): Ether = ???
 
     override protected def copyTo(account: Account[ImmutableState]): Unit = ???
 

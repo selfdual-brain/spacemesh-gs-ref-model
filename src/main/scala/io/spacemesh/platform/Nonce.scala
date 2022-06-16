@@ -4,6 +4,8 @@ import scala.collection.immutable.BitSet
 
 case class Nonce(counter: Long, bitfield: BitSet) {
 
+//  override def toString: String = s"Nonce($counter : ${bitfield.mkString(",")})"
+
   def canBeAppliedOver(oldNonce: Nonce): Boolean = 
     math.signum(counter - oldNonce.counter) match {
       case 1 => true

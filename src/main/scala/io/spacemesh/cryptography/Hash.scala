@@ -8,9 +8,11 @@ import scala.collection.mutable.StringBuilder
  * Wrapper for a cryptographic hash value.
  */
 case class Hash(bytes: Array[Byte]) extends Ordered[Hash] {
-  override lazy val hashCode: Int = calculateHashCode //we memoize hashCode of this hash for performance optimization; it impacts all of the crucial data structures in the simulator
+  override lazy val hashCode: Int = calculateHashCode //we memoize hashCode (crucial performance optimization !)
 
-  override def toString: String = convertBytesToHex(bytes)
+  override def toString: String = convertBytesToHexDashed(bytes)
+  
+  def toStringPlain: String = convertBytesToHex(bytes)
 
   private def convertBytesToHex(bytes: Seq[Byte]): String = {
     val sb = new StringBuilder
@@ -22,9 +24,14 @@ case class Hash(bytes: Array[Byte]) extends Ordered[Hash] {
 
   private def convertBytesToHexDashed(bytes: Seq[Byte]): String = {
     val sb = new StringBuilder
+    var isFirst: Boolean = true
     for (b <- bytes) {
+      if (isFirst)
+        isFirst = false
+      else  
+        sb.append('-')
+        
       sb.append(String.format("%02x", Byte.box(b)))
-      sb.append('-')
     }
     sb.toString
   }

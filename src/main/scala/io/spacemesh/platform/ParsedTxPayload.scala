@@ -6,6 +6,6 @@ abstract class ParsedTxPayload{
   def minLayer: Long
   def maxLayer: Long
   def maxGas: Gas
-  def gasPrice: TokensAmount
+  def gasPrice: Ether
 }
                      
