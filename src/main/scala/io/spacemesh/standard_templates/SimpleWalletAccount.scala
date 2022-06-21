@@ -14,14 +14,6 @@ object SimpleWalletAccount {
 
     override def verify(tx: Transaction, parsedPayload: ParsedTxPayload): Boolean = ???
 
-    override def relayCall(targetAccount: AccountAddress, method: Byte, methodArgs: Array[Byte]): Unit = ???
-
-    override def spawn[T](template: TemplateAddress, immutableState: T): AccountAddress = ???
-
-    override def transfer(destination: AccountAddress, amount: Ether): Unit = ???
-
-    override def balance(): Ether = ???
-
     override protected def copyTo(account: Account[ImmutableState]): Unit = ???
 
     override protected def createEmpty(): Account[ImmutableState] = ???

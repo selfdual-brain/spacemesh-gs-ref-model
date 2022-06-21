@@ -7,5 +7,6 @@ case class ParsedTxPayload(
   maxLayer: Long,
   maxGas: Gas,
   gasPrice: Ether,
+  verifyData: Array[Byte]
 )
                      

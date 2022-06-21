@@ -1,5 +1,8 @@
 package io.spacemesh.platform
 
-class TemplateMethodSignature {
-
+abstract class TemplateMethodSignature {
+}
+object TemplateMethodSignature {
+  case object CustomSerialization extends TemplateMethodSignature
+  case class Schema(argument: Datatype, result: Option[Datatype]) extends TemplateMethodSignature
 }
