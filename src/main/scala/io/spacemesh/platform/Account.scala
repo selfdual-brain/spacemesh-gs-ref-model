@@ -2,7 +2,7 @@ package io.spacemesh.platform
 
 import io.spacemesh.platform.TemplateMethodVisibility.*
 
-abstract class Account[S](address: AccountAddress, immutableState: S, host: FFI) extends CloningSupport[Account[S]] {
+abstract class Account[S](address: AccountAddress, immutableState: S, host: HostAPI) extends CloningSupport[Account[S]] {
 
   @internal @query
   def parsePayload(tx: Transaction): ParsedTxPayload
@@ -18,6 +18,10 @@ abstract class Account[S](address: AccountAddress, immutableState: S, host: FFI)
   @local(selector = 2)
   def spawn[T](template: TemplateAddress, immutableState: T): AccountAddress = {
     host.spawnNewAccount(template, immutableState)
+  }
+
+  def deploy[S](template: Template[S]): Unit = {
+    host.deployNewTemplate(template)
   }
 
   @local(selector = 3)

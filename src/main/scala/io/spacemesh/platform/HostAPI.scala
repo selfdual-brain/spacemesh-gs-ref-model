@@ -7,7 +7,7 @@ package io.spacemesh.platform
  * (i.e. the code belonging to WHICH account is calling the host service).
  * Below in the docs we refer to the calling account as "the caller".
  */
-trait FFI {
+trait HostAPI {
 
   /**
    * Executes native tokens transfer from the caller to given destination account.

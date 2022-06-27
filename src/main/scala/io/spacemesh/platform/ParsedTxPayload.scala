@@ -1,12 +1,12 @@
 package io.spacemesh.platform
 
-case class ParsedTxPayload(
-  methodArgumentsBlob: Array[Byte],
-  nonce: Nonce,
-  minLayer: Long,
-  maxLayer: Long,
-  maxGas: Gas,
-  gasPrice: Ether,
-  verifyData: Array[Byte]
-)
+trait ParsedTxPayload {
+  val methodArgumentsBlob: Array[Byte]
+  val nonce: Nonce
+  val minLayer: Long
+  val maxLayer: Long
+  val maxGas: Gas
+  val gasPrice: Ether
+  val verifyData: Array[Byte]
+}
                      

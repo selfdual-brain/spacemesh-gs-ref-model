@@ -1,6 +1,6 @@
 package io.spacemesh.standard_templates
 
-import io.spacemesh.platform.{AccountAddress, FFI, Nonce, ParsedTxPayload, Account, TemplateAddress, Ether, Transaction}
+import io.spacemesh.platform.{AccountAddress, HostAPI, Nonce, ParsedTxPayload, Account, TemplateAddress, Ether, Transaction}
 
 object SimpleWalletAccount {
 
@@ -8,7 +8,7 @@ object SimpleWalletAccount {
 
   }
 
-  class Logic(account: AccountAddress, s: ImmutableState, host: FFI) extends Account[ImmutableState](account, s, host) {
+  class Logic(account: AccountAddress, s: ImmutableState, host: HostAPI) extends Account[ImmutableState](account, s, host) {
 
     override def parsePayload(tx: Transaction): ParsedTxPayload = ???
 
