@@ -1,6 +1,6 @@
 package io.spacemesh.platform
 
-import io.spacemesh.platform.TemplateMethodVisibility.*
+import io.spacemesh.platform.TemplateMethodVisibility.{local, *}
 
 abstract class Account[S](address: AccountAddress, immutableState: S, host: HostAPI) extends CloningSupport[Account[S]] {
 
@@ -20,11 +20,12 @@ abstract class Account[S](address: AccountAddress, immutableState: S, host: Host
     host.spawnNewAccount(template, immutableState)
   }
 
+  @local(selector = 3)
   def deploy[S](template: Template[S]): Unit = {
     host.deployNewTemplate(template)
   }
 
-  @local(selector = 3)
+  @local(selector = 4)
   def transfer(destination: AccountAddress, amount: Ether): Unit = {
     host.transfer(destination, amount)
   }

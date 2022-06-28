@@ -1,23 +1,18 @@
 package io.spacemesh.standard_templates
 
-import io.spacemesh.platform.{AccountAddress, HostAPI, Nonce, ParsedTxPayload, Account, TemplateAddress, Ether, Transaction}
+import io.spacemesh.cryptography.PublicKey
+import io.spacemesh.platform.*
 
-object SimpleWalletAccount {
+class SimpleWalletAccount(address: AccountAddress, publicKey: PublicKey, host: HostAPI) extends Account[PublicKey](address, publicKey, host) {
 
-  class ImmutableState {
+  override def parsePayload(tx: Transaction): ParsedTxPayload = ???
 
-  }
+  override def verify(tx: Transaction, parsedPayload: ParsedTxPayload): Boolean = ???
 
-  class Logic(account: AccountAddress, s: ImmutableState, host: HostAPI) extends Account[ImmutableState](account, s, host) {
+  override protected def copyTo(account: Account[PublicKey]): Unit = ???
 
-    override def parsePayload(tx: Transaction): ParsedTxPayload = ???
+  override protected def createEmpty(): Account[PublicKey] = ???
 
-    override def verify(tx: Transaction, parsedPayload: ParsedTxPayload): Boolean = ???
-
-    override protected def copyTo(account: Account[ImmutableState]): Unit = ???
-
-    override protected def createEmpty(): Account[ImmutableState] = ???
-  }
 
 }
 

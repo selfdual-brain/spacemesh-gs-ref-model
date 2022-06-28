@@ -1,12 +1,11 @@
 package io.spacemesh.platform
 
 trait ParsedTxPayload {
-  val methodArgumentsBlob: Array[Byte]
-  val nonce: Nonce
-  val minLayer: Long
-  val maxLayer: Long
-  val maxGas: Gas
-  val gasPrice: Ether
-  val verifyData: Array[Byte]
+  def methodArgumentsBlob: Array[Byte]
+  def nonce: Nonce
+  def minLayer: Long
+  def maxLayer: Long
+  def maxGas: Gas
+  def gasPrice: GasPrice
 }
                      
