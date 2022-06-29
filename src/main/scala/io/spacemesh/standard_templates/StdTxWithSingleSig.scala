@@ -5,15 +5,17 @@ import io.spacemesh.data_structures.Slice
 import io.spacemesh.platform.*
 
 case class StdTxWithSingleSig(
-                             rawTx: Array[Byte],
-                             methodArgumentsBlob: Slice[Byte],
-                             signedPart: Slice[Byte],
+                             rawTx: IndexedSeq[Byte],
+                             methodArgumentsRaw: IndexedSeq[Byte],
+                             signedPart: IndexedSeq[Byte],
                              signature: Signature,
                              nonce: Nonce,
                              minLayer: Long,
                              maxLayer: Long,
                              maxGas: Gas,
                              gasPrice: GasPrice,
-                             ) extends ParsedTxPayload
+                             ) extends ParsedTransaction {
+
+}
 
 

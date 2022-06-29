@@ -1,20 +1,20 @@
 package io.spacemesh.data_structures
 
 /**
- * A view on an sub-interval of some array.
+ * A view on an sub-interval of some indexed sequence.
  */
-class Slice[E](targetArray: Array[E], start: Int, length: Int) extends Iterable[E] {
+class Slice[E](targetSeq: IndexedSeq[E], start: Int, val length: Int) extends IndexedSeq[E] {
   val end: Int = start + length - 1
-  assert(targetArray.length >= end + 1)
+  assert(targetSeq.length >= end + 1)
 
   override def iterator: Iterator[E] = new Iterator[E] {
-    var nextRelativeIndex: Int = 0 
-    
+    var nextRelativeIndex: Int = 0
+
     override def hasNext: Boolean = start + nextRelativeIndex <= end
 
     override def next(): E = {
       if (this.hasNext) {
-        val result: E = targetArray(start + nextRelativeIndex)
+        val result: E = targetSeq(start + nextRelativeIndex)
         nextRelativeIndex += 1
         return result
       } else {
@@ -22,5 +22,11 @@ class Slice[E](targetArray: Array[E], start: Int, length: Int) extends Iterable[
       }
     }
   }
-  
+
+  override def apply(i: Int): E =
+    if (i < length)
+      targetSeq(start + i)
+    else
+      throw new IndexOutOfBoundsException(i)
+
 }

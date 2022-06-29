@@ -17,7 +17,7 @@ abstract class TxExecutor(vm: VirtualMachine) {
    * @param tx1kilobyteCost consensus cost to be charged (gas units per 1 kilobyte of tx data)
    * @return new global state
    */
-  def execute(gs: GlobalState, tx: Transaction, parsedPayload: ParsedTxPayload, currentGasPrice: GasPrice, tx1kilobyteCost: Gas): (GlobalState, TxReceipt) = {
+  def execute(gs: GlobalState, tx: Transaction, parsedPayload: ParsedTransaction, currentGasPrice: GasPrice, tx1kilobyteCost: Gas): (GlobalState, TxReceipt) = {
     val declaredMaxGas: Gas = parsedPayload.maxGas
     val costOfDeclaredMaxGas: Ether = declaredMaxGas * currentGasPrice
     val initialAccountBalance: Ether = gs.balanceOf(tx.principal)

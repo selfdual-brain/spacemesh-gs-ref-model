@@ -5,9 +5,9 @@ import io.spacemesh.platform.*
 
 class SimpleWalletAccount(address: AccountAddress, publicKey: PublicKey, host: HostAPI) extends Account[PublicKey](address, publicKey, host) {
 
-  override def parsePayload(tx: Transaction): ParsedTxPayload = ???
+  override def parsePayload(tx: Transaction): ParsedTransaction = ???
 
-  override def verify(tx: Transaction, parsedPayload: ParsedTxPayload): Boolean = ???
+  override def verify(tx: Transaction, parsedPayload: ParsedTransaction): Boolean = ???
 
   override protected def copyTo(account: Account[PublicKey]): Unit = ???
 

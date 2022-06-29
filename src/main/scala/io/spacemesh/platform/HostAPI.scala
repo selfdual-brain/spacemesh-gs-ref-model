@@ -43,11 +43,11 @@ trait HostAPI {
   /**
    * Registers new template.
    *
-   * @param template template definition
+   * @param template template definition (binary form)
    * @tparam S type of immutable state for accounts derived from this template
    * @return
    */
-  def deployNewTemplate[S](template: Template[S]): TemplateAddress
+  def deployNewTemplate[S](template: Array[Byte]): TemplateAddress
 
   /**
    * Layer number of the block in the context of which the current transaction is being executed.

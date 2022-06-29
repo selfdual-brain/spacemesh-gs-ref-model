@@ -5,10 +5,10 @@ import io.spacemesh.platform.TemplateMethodVisibility.{local, *}
 abstract class Account[S](address: AccountAddress, immutableState: S, host: HostAPI) extends CloningSupport[Account[S]] {
 
   @internal @query
-  def parsePayload(tx: Transaction): ParsedTxPayload
+  def parsePayload(tx: Transaction): ParsedTransaction
 
   @internal @query
-  def verify(tx: Transaction, parsedPayload: ParsedTxPayload): Boolean
+  def verify(tx: Transaction, parsedPayload: ParsedTransaction): Boolean
 
   @local(selector = 1)
   def relayCall(targetAccount: AccountAddress, method: Byte, methodArgs: Array[Byte]): Unit = {
@@ -21,7 +21,7 @@ abstract class Account[S](address: AccountAddress, immutableState: S, host: Host
   }
 
   @local(selector = 3)
-  def deploy[S](template: Template[S]): Unit = {
+  def deploy[S](template: Array[Byte]): Unit = {
     host.deployNewTemplate(template)
   }
 

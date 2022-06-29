@@ -1,7 +1,7 @@
 package io.spacemesh.platform
 
-trait ParsedTxPayload {
-  def methodArgumentsBlob: Array[Byte]
+trait ParsedTransaction {
+  def methodArgumentsRaw: IndexedSeq[Byte]
   def nonce: Nonce
   def minLayer: Long
   def maxLayer: Long
