@@ -12,9 +12,8 @@ import scala.collection.mutable
  * This solution makes it possible to model blockchain accounts storage as instance variables in Scala.
  * Instead of using a Merkle-tree for accounts storage representation (as would be happening in
  * a "real" implementation of smart contracts platform) we just have accounts as instances
- * of plain Scala classes. However, we want the global state to be immutable, so we need to
- * go via cloning of account instances and tracking the mutated account instances within
- * the scope of one transaction.
+ * of plain Scala classes. However, we want the global state to be immutable, so our approach is to
+ * clone account instance and track all the mutated account instances within the scope of one transaction.
  */
 class GlobalStateIncrementalUpdateBuffer(originalGlobalState: GlobalState, txPrincipal: AccountAddress) {
   val map = new mutable.HashMap[AccountAddress, AccountMutationHolder[?]]

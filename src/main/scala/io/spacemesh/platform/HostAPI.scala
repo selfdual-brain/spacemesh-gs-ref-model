@@ -23,12 +23,13 @@ trait HostAPI {
    * Caution: target method must have @api visibility (otherwise TxAbort will be thrown).
    *
    * @param targetAccount address of the receiver (account)
+   * @param attachedTransfer coins to be transferred with this call                      
    * @param method method index
    * @param methodArgs invocation arguments (to be passed as input to target method)
    * @tparam R the result will be type-casted do this type
    * @return return value from the method
    */
-  def call[R](targetAccount: AccountAddress, method: Byte, methodArgs: Array[Byte]): R
+  def call[R](targetAccount: AccountAddress, attachedTransfer: Ether, method: Byte, methodArgs: Array[Byte]): R
 
   /**
    * Creates new account (as an instance of given template).
@@ -61,6 +62,22 @@ trait HostAPI {
    */
   def balance(): Ether
 
+  /**
+   * Current balance of GasPurse.
+   */
+  def gasPaymentsReserve(): Ether
+
+  /**
+   * Transfers given amount from BusinessPurse to GasPurse.
+   */
+  def increaseGasPaymentsReserve(amount: Ether): Ether
+
+  /**
+   * Schedules withdrawal from GasPurse.
+   * Caution: this will be executed as deferred operation (via withdrawals queue).
+   */  
+  def decreaseGasPaymentsReserve(amount: Ether): Ether
+  
   /**
    * Current nonce value of the caller.
    */

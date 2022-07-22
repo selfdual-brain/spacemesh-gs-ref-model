@@ -3,7 +3,7 @@ package io.spacemesh.standard_templates
 import io.spacemesh.cryptography.PublicKey
 import io.spacemesh.platform.*
 
-class SimpleWalletAccount(address: AccountAddress, publicKey: PublicKey, host: HostAPI) extends Account[PublicKey](address, publicKey, host) {
+class SimpleWalletAccount(address: AccountAddress, publicKey: PublicKey, host: HostAPI) extends Account[PublicKey](address, AccountFlavor.Muggle, publicKey, host) {
 
   override def parsePayload(tx: Transaction): ParsedTransaction = ???
 
