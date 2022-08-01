@@ -2,7 +2,9 @@ package io.spacemesh.standard_templates
 
 import io.spacemesh.cryptography.Signature
 import io.spacemesh.data_structures.Slice
-import io.spacemesh.execution.*
+import io.spacemesh.blockchain.transactions.{Nonce, ParsedTransaction}
+import io.spacemesh.blockchain.Gas
+import io.spacemesh.blockchain.GasPrice
 
 case class StdTxWithSingleSig(
                              rawTx: IndexedSeq[Byte],

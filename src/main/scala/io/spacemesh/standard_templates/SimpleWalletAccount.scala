@@ -1,7 +1,10 @@
 package io.spacemesh.standard_templates
 
 import io.spacemesh.cryptography.PublicKey
-import io.spacemesh.execution.*
+import io.spacemesh.blockchain.svm.{Account, AccountAddress, HostAPI}
+import io.spacemesh.blockchain.transactions.{ParsedTransaction, Transaction}
+import io.spacemesh.blockchain.svm.AccountFlavor
+import io.spacemesh.blockchain.Ether
 
 class SimpleWalletAccount(address: AccountAddress, publicKey: PublicKey, host: HostAPI) extends Account[PublicKey](address, AccountFlavor.Muggle, publicKey, host) {
 
