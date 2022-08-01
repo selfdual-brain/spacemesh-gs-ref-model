@@ -1,4 +1,4 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
 sealed abstract class TxReceipt {
   val gasBurned: Gas

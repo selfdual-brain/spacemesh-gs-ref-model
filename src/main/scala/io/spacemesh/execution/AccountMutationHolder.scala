@@ -1,4 +1,4 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
 /**
  * Holds together an account instance and (mutable) balance.

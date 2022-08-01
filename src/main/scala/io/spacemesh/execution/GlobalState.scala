@@ -1,4 +1,4 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
 import io.spacemesh.cryptography.Hash
 import scala.collection.immutable

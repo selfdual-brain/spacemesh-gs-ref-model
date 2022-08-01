@@ -1,7 +1,7 @@
 package io.spacemesh.standard_templates
 
 import io.spacemesh.cryptography.PublicKey
-import io.spacemesh.platform.*
+import io.spacemesh.execution.*
 
 class SimpleWalletAccount(address: AccountAddress, publicKey: PublicKey, host: HostAPI) extends Account[PublicKey](address, AccountFlavor.Muggle, publicKey, host) {
 
@@ -13,6 +13,6 @@ class SimpleWalletAccount(address: AccountAddress, publicKey: PublicKey, host: H
 
   override protected def createEmpty(): Account[PublicKey] = ???
 
-
+  override def maxSpend(tx: Transaction): Ether = ???
 }
 

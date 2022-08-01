@@ -1,4 +1,4 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
 case class Template[S](
                         accountsFactory: (AccountAddress, S, HostAPI) => Account[S],

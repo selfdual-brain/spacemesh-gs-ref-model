@@ -1,6 +1,6 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
-import io.spacemesh.platform.TxReceipt
+import io.spacemesh.execution.TxReceipt
 
 abstract class TxExecutor(vm: VirtualMachine) {
 

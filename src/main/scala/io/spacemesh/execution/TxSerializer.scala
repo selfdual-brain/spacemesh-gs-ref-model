@@ -1,4 +1,4 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
 trait TxSerializer {
   def serialize(tx: Transaction): Array[Byte]

@@ -1,11 +1,14 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
-import io.spacemesh.platform.TemplateMethodVisibility.{local, *}
+import io.spacemesh.execution.TemplateMethodVisibility.*
 
 abstract class Account[S](address: AccountAddress, flavor: AccountFlavor, immutableState: S, host: HostAPI) extends CloningSupport[Account[S]] {
 
   @internal @query
   def parsePayload(tx: Transaction): ParsedTransaction
+
+  @internal @query
+  def maxSpend(tx: Transaction): Ether
 
   @internal @query
   def verify(tx: Transaction, parsedPayload: ParsedTransaction): Boolean

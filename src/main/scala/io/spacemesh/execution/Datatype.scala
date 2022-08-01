@@ -1,4 +1,4 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
 /**
  * Encoding of "mini schema language" used for defining signatures of template methods. 

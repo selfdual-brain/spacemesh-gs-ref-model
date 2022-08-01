@@ -1,4 +1,4 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
 /**
  * API of the "host" (i.e. the smart contracts execution engine) exposed to every smart contract.

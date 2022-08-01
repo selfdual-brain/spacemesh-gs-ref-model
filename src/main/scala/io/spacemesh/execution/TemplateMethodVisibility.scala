@@ -1,4 +1,4 @@
-package io.spacemesh.platform
+package io.spacemesh.execution
 
 /**
  * Annotations declaring public method visibility in templates.
