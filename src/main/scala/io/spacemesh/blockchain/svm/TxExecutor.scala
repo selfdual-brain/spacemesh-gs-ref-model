@@ -23,34 +23,35 @@ abstract class TxExecutor(vm: VirtualMachine) {
   def execute(gs: GlobalState, tx: Transaction, parsedPayload: ParsedTransaction, currentGasPrice: GasPrice, tx1kilobyteCost: Gas): (GlobalState, TxReceipt) = {
     val declaredMaxGas: Gas = parsedPayload.maxGas
     val costOfDeclaredMaxGas: Ether = declaredMaxGas * currentGasPrice
-    val initialAccountBalance: Ether = gs.balanceOf(tx.principal)
+    val initialAccountBBalance: Ether = gs.businessPurseBalanceOf(tx.principal)
+    val initialAccountGBalance: Ether = gs.gasPurseBalanceOf(tx.principal)
     val gasAmountChargedForConsensus: Gas = math.max(1, tx.binarySize * tx1kilobyteCost / 1024)
     val consensusFee: Ether = gasAmountChargedForConsensus * currentGasPrice
     val newNonce: Nonce = parsedPayload.nonce
 
-    //nonce mismatch check
-    if (! newNonce.canBeAppliedOver(gs.nonceOf(tx.principal))) {
-      val newGlobalState: GlobalState = gs.updateAccount(addr = tx.principal, balanceDelta = - consensusFee, maybeNonce = None)
-      val receipt: TxReceipt = TxReceipt.NonceMismatch(gasBurned = gasAmountChargedForConsensus, feeCharged = consensusFee)
-      return (newGlobalState, receipt)
-    }
-
-    //checking if declared gas limit is covered by the balance of principal account
-    if (initialAccountBalance < consensusFee + costOfDeclaredMaxGas) {
-      val totalFee: Ether = gasAmountChargedForConsensus * currentGasPrice
-      val newGlobalState: GlobalState = gs.updateAccount(addr = tx.principal, balanceDelta = - totalFee, maybeNonce = Some(newNonce))
-      val receipt: TxReceipt = TxReceipt.GasLimitNotCoveredBySponsorAccountBalance(gasBurned = gasAmountChargedForConsensus, feeCharged = totalFee)
-      return (newGlobalState, receipt)
-    }
-
-    //we update nonce and we secure the cost of gas
-    //this will be the global state used as the base for the changes buffer
-    val gs1: GlobalState = gs.updateAccount(addr = tx.principal, balanceDelta = consensusFee + costOfDeclaredMaxGas, Some(newNonce))
-
-    //preparing the "incremental update buffer" to accumulate all changes done to global state
-    //by the cascade of smart-contract methods invoked during processing of this transaction
-    //caution: the buffer also works as the cache of cloned accounts
-    val buffer = new GlobalStateIncrementalUpdateBuffer(gs1, tx.principal)
+//    //nonce mismatch check
+//    if (! newNonce.canBeAppliedOver(gs.nonceOf(tx.principal))) {
+//      val newGlobalState: GlobalState = gs.updateAccount(addr = tx.principal, balanceDelta = - consensusFee, newNonceOption = None)
+//      val receipt: TxReceipt = TxReceipt.NonceMismatch(gasBurned = gasAmountChargedForConsensus, feeCharged = consensusFee)
+//      return (newGlobalState, receipt)
+//    }
+//
+//    //checking if declared gas limit is covered by the balance of principal account
+//    if (initialAccountBalance < consensusFee + costOfDeclaredMaxGas) {
+//      val totalFee: Ether = gasAmountChargedForConsensus * currentGasPrice
+//      val newGlobalState: GlobalState = gs.updateAccount(addr = tx.principal, balanceDelta = - totalFee, newNonceOption = Some(newNonce))
+//      val receipt: TxReceipt = TxReceipt.GasLimitNotCoveredBySponsorAccountBalance(gasBurned = gasAmountChargedForConsensus, feeCharged = totalFee)
+//      return (newGlobalState, receipt)
+//    }
+//
+//    //we update nonce and we secure the cost of gas
+//    //this will be the global state used as the base for the changes buffer
+//    val gs1: GlobalState = gs.updateAccount(addr = tx.principal, balanceDelta = consensusFee + costOfDeclaredMaxGas, Some(newNonce))
+//
+//    //preparing the "incremental update buffer" to accumulate all changes done to global state
+//    //by the cascade of smart-contract methods invoked during processing of this transaction
+//    //caution: the buffer also works as the cache of cloned accounts
+//    val buffer = new GlobalStateIncrementalUpdateBuffer(gs1, tx.principal)
 
     //todo finish this
     return (gs, TxReceipt.Success(1,1))

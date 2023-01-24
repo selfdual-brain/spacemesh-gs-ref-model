@@ -18,6 +18,6 @@ import scala.collection.mutable
  * clone account instance and track all the mutated account instances within the scope of one transaction.
  */
 class GlobalStateIncrementalUpdateBuffer(originalGlobalState: GlobalState, txPrincipal: AccountAddress) {
-  val map = new mutable.HashMap[AccountAddress, AccountMutationHolder[?]]
-
+  val mutatedAccounts = new mutable.HashMap[AccountAddress, AccountMutationHolder[?]]
+  val deployedTemplates = new mutable.HashMap[TemplateAddress, Template[?]]
 }

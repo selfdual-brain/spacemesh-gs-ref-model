@@ -1,0 +1,426 @@
+//#################### globally known types ####################
+module common {
+  type Ed25519PublicKey = Array[Byte](32);
+  type Ed25519PrivateKey = Array[Byte](64);
+  type Ed25519Sig = Array[Byte](64);
+  type Address = Array[Byte](24);
+  type GasPrice = u64;
+  type CoinAmount = u64;
+  type LayerHeight = u32;
+  type Nonce = u64;
+}
+
+//#################### Global state ###################
+module global_state imports common {
+
+  type Stub = Struct [
+    balance: CoinAmount
+  ];
+
+  type Account[IS,MS] = Struct [
+    template: Address,
+    nonce: Nonce,
+    balance: CoinAmount,
+    immutableState: IS,
+    mutableState: MS
+  ];
+
+  //Caution: in Genesis-SVM all templates are hardcoded, hence their definitions are not really stored in the global state
+  type Template = Struct {
+    immutableState: TypeRef,
+    mutableState: TypeRef
+  }
+
+  type GSCell = Union [
+    Account,
+    Stub,
+    Template
+  ];
+
+  type GlobalState = Map[Address, GSCell];
+
+}
+
+//#################### Transaction envelopes ###################
+module transactions imports common {
+
+  type Transaction = Union [
+    SelfSpawnTx,
+    SpawnTx,
+    LocalMethodCallTx,
+    ForeignMethodCallTx, //not supported in Genesis version of Spacemesh
+    TemplateDeployTx //not supported in Genesis version of Spacemesh
+  ];
+
+  type SelfSpawnTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 0,
+    template: Address,
+    payload: TailWrapper
+  ];
+
+  type SpawnTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 1,
+    principal: Address,
+    template: Address,
+    payload: TailWrapper
+  ];
+
+  type LocalMethodCallTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 2,
+    principal: Address,
+    methodSelector: uint16,
+    payload: TailWrapper
+  ];
+
+  type ForeignMethodCallTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 3,
+    principal: Address,
+    targetAccount: Address,
+    methodSelector: uint16,
+    payload: TailWrapper
+  ];
+
+  type TemplateDeployTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 4,
+    principal: Address,
+    expectedTemplateAddress: Address,
+    templateDefinition: TailWrapper
+  ];
+
+}
+
+//################### semantics of transaction execution #########################
+module svm {
+
+  type ParsedPayload = Struct [
+    callArgs: Wrapper
+    nonce: Nonce,
+    minLayer: Long,
+    maxLayer: Long,
+    maxGas: Gas,
+    gasPrice: GasPrice
+  ]
+
+  //Template mount API (methods that a template exposes to the VM)
+  interface TemplateAPI[IS,MS] {
+    fun parsePayload(tx: Transaction): ParsedPayload throws ParsingError;
+    fun maxSpend(tx: Transaction, parsedPayload: ParsedPayload): CoinAmount;
+    fun verify(tx: Transaction, parsedPayload: ParsedPayload): CoinAmount;
+    fun parseImmutableState(wrapper: Wrapper): IS throws ParsingError;
+    fun mutableStateInit(): MS;
+  }
+
+  //Host API (method that VM exposes to template developers)
+  interface HostAPI {
+    fun transfer(targetAccount: Address, amount: CoinAmount);
+    fun call[T](targetAccount: Address, method: u16, args: T);
+    fun balance(): CoinAmount;
+    fun layerId(): u64;
+    fun nonce(): Nonce
+  }
+
+  //=======================================================================================================
+  //              this pseudo-code specifies how "self-spawn" transactions are executed
+  //=======================================================================================================
+  fun execSelfSpawn(globalState: GlobalState, tx: SelfSpawnTx): GlobalState {
+    //remembering gas metering counter value at the beginning of exec processing
+    val gasAtBeginning: Gas = vm.gasCounterValue()
+
+    //checking template address
+    val template: Template = switch globalState.get(tx.template) {
+      case None: throw Error("template not found")
+      case Some(template: Template): template
+      case Some(stub: Stub): throw Error("expected a template, found a stub")
+      case Some(account: Account): throw Error("expected a template, found an account")
+    }
+
+    //retrieving API of this template
+    val templateAPI: TemplateAPI[IS,MS] = vm.getAPI(template)
+
+    //parsing the payload part of transaction (template-specific parsing is applied here)
+    val parsedPayload: ParsedPayload = templateAPI.parsePayload(tx.payload)
+
+    //tx signatures check (template-specific)
+    if (! templateAPI.verify(tx, parsedPayload)) {
+      throw Error("invalid tx signature")
+    }
+
+    //calculating principal's address
+    val principal: Address = vm.cryptoHash(tx.template, parsedPayload.callArgs)
+
+    //account at this address must be a stub for self-spawn to be successful
+    val stubBalance: CoinAmount = switch globalState.get(principal) {
+      case None: throw Error("stub not found: $principal")
+      case Some(template: Template): throw Error("expected a stub, found a template: address=$principal")
+      case Some(stub: Stub): stub.balance
+      case Some(account: Account): throw Error("expected a stub, found an account: address=$principal")
+    }
+
+    //calculating coin balance required to execute this transaction
+    val requiredBalance: CoinAmount = templateAPI.maxSpend(tx) + parsedPayload.maxGas * parsedPayload.gasPrice
+
+    //checking if current account balance can cover this transaction
+    if (stubBalance < requiredBalance) {
+      throw Error("insufficient balance for account: address=$principal, required amount was: $requiredBalance")
+    }
+
+    //initializing mutable state of the new account
+    val initialShapeOfMutableState: MS = templateAPI.mutableStateInit()
+
+    //initializing immutable state of the new account
+    val parsedImmutableState: IS = templateAPI.parseImmutableState(parsedPayload.callArgs),
+
+    //instead of real gas metering we use hardcoded-gas table in Genesis-SVM
+    //val gasConsumed: Gas = vm.gasCounterValue() - gasAtBeginning
+    val gasConsumed: Gas = vm.fixedGas(tx, parsedPayload)
+
+    //aborting if consumed gas exceeds max gas (max gas was declared by the transaction)
+    if (gasConsumed > parsedPayload.maxGas) {
+      throw Error("exceeded max gas")
+    }
+
+    //creating new account
+    val newAccount: Account[IS,MS] = Account[IS,MS](
+        template = tx.template,
+        nonce = 0,
+        balance = stubBalance - gasConsumed * parsedPayload.gasPrice,
+        immutableState = parsedImmutableState,
+        mutableState = initialShapeOfMutableState
+    )
+
+    //creating new global state with the entry at principal address updated (stub -> account state)
+    val newGlobalState: GlobalState = globalState.addOrReplace(principal -> newAccount)
+    return newGlobalState
+  }
+
+  //=======================================================================================================
+  //                   this pseudo-code specifies how "spawn" transactions are executed
+  //=======================================================================================================
+  fun execSpawn(globalState: GlobalState, tx: SpawnTx) {
+    //remembering gas metering counter value at the beginning of exec processing
+    val gasAtBeginning: Gas = vm.gasCounterValue()
+
+    //checking if principal is an already existing account
+    val principalAccount: Account[ISP, MSP] = switch globalState.get(tx.principal) {
+      case None: throw Error("account not found: ${tx.principal}")
+      case Some(template: Template): throw Error("expected an account, found a template")
+      case Some(stub: Stub): throw Error("expected an account, found a stub")
+      case Some(account: Account): account
+    }
+
+    //checking correctness of provided template address (to be used for the new account)
+    val newAccountTemplate: Template = switch globalState.get(tx.template) {
+      case None: throw Error("template not found")
+      case Some(template: Template): template
+      case Some(stub: Stub): throw Error("expected template, found a stub")
+      case Some(account: Account): throw Error("expected template, found an account")
+    }
+
+    //retrieving API of new account's template
+    val newAccountTemplateAPI: TemplateAPI[ISA,MSA] = vm.getAPI(newAccountTemplate)
+
+    //retrieving API of principal's template
+    val principalTemplateAPI: TemplateAPI[ISP, MSP] = principalAccount.template
+
+    //parsing the payload part of transaction (template-specific parsing is applied here)
+    val parsedPayload: ParsedPayload = principalTemplateAPI.parsePayload(tx.payload)
+
+    //tx signatures check (template-specific)
+    if (! principalTemplateAPI.verify(tx, parsedPayload)) {
+      throw Error("invalid tx signature")
+    }
+
+    //tx nonce check
+    //Genesis-SVM uses fixed nonces algorithm ("counter with gaps")
+    //nonce customization is to be introduced in Full-SVM
+    if (parsedPayload.nonce <= principalAccount.nonce) {
+      throw Error("nonce mismatch: account-nonce = ${account.nonce} tx-nonce=${payload.nonce}")
+    }
+
+    //calculating the address of new account
+    val addressOfNewAccount: Address = vm.cryptoHash(tx.template, parsedPayload.callArgs)
+
+    //account at this address must not be initialized yet
+    val stubBalance: CoinAmount = switch globalState.get(addressOfNewAccount) {
+      case None: 0
+      case Some(template: Template): throw Error("expected a stub, found a template: address=$principal")
+      case Some(stub: Stub): stub.balance
+      case Some(account: Account): throw Error("expected a stub, found an account: address=$principal")
+    }
+
+    //calculating coin balance required to execute this transaction
+    val requiredBalance: CoinAmount = principalTemplateAPI.maxSpend(tx) + parsedPayload.maxGas * parsedPayload.gasPrice
+
+    //checking if principal account balance can cover this transaction
+    if (principalAccount.balance < requiredBalance) {
+      throw Error("insufficient balance for account: address=${tx.principal}, required amount was: $requiredBalance")
+    }
+
+    //initializing mutable state of the new account
+    val initialShapeOfMutableState: MS = newAccountTemplateAPI.mutableStateInit()
+
+    //initializing immutable state of the new account
+    val parsedImmutableState: IS = newAccountTemplateAPI.parseImmutableState(parsedPayload.callArgs),
+
+    //instead of real gas metering we use hardcoded-gas table in Genesis-SVM
+    //val gasConsumed: Gas = vm.gasCounterValue() - gasAtBeginning
+    val gasConsumed: Gas = vm.fixedGas(tx, parsedPayload)
+
+    //aborting if consumed gas exceeds max gas (max gas was declared by the transaction)
+    if (gasConsumed > parsedPayload.maxGas) {
+      throw Error("exceeded max gas")
+    }
+
+    //creating new account
+    val newAccount: Account[ISA,MSA] = Account[ISA,MSA](
+        template = tx.template,
+        nonce = 0,
+        balance = stubBalance,
+        immutableState = parsedImmutableState,
+        mutableState = initialShapeOfMutableState
+    )
+
+    //updating principal account (nonce and balance)
+    val updatedPrincipalAccount: Account[ISP,MSP] = Account[ISP,MSP]{
+        template = principalAccount.template,
+        nonce = parsedPayload.nonce,
+        balance = principalAccount.balance - gasConsumed * parsedPayload.gasPrice,
+        immutableState = principalAccount.immutableState,
+        mutableState = principalAccount.mutableState
+    }
+
+    //creating new global state with both new account and principal account entries updated
+    val newGlobalState: GlobalState = globalState.addOrReplace(addressOfNewAccount -> newAccount)
+                                                 .addOrReplace(principal -> updatedPrincipalAccount)
+
+    return newGlobalState
+  }
+
+  //=======================================================================================================
+  //            this pseudo-code specifies how "local method call" transactions are executed
+  //=======================================================================================================
+  fun execLocalMethodCall(tx: LocalMethodCallTx) {
+
+  }
+
+
+
+
+}
+
+
+//################### Template: SingleSigWallet #########################
+module SingleSigWallet_Template imports common {
+
+  type ImmutableState = Struct [
+    publicKey: Ed25519PublicKey
+  ]
+
+  type SelfSpawn_Payload = Struct [
+    gasPrice: GasPrice,
+    immutableState: ImmutableState,
+    signature: Ed25519Sig
+  ];
+
+  type Spawn_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    immutableState: PrefixedWrapper,
+    signature: Ed25519Sig
+  ];
+
+  type LocalMethodCall_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    methodArgs: PrefixedWrapper,
+    signature: Ed25519Sig
+  ]
+
+  fun spend(recipient: Address, amount: CoinAmount);
+
+}
+
+//################### Template: MultiSigWallet #########################
+module MultiSigWallet_Template {
+
+  type ImmutableState = Struct [
+    publicKeys: Seq[Ed25519PublicKey],
+    requiredNumberOfSignatures: Byte,
+  ]
+
+  type SelfSpawn_Payload = Struct [
+    gasPrice: GasPrice,
+    immutableState: ImmutableState,
+    signatures: Map[Byte, Ed25519Sig]
+  ];
+
+  type Spawn_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    immutableState: PrefixedWrapper,
+    signatures: Map[Byte, Ed25519Sig]
+  ];
+
+  type LocalMethodCall_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    signatures: Map[Byte, Ed25519Sig]
+  ];
+
+  fun spend(recipient: Address, amount: CoinAmount);
+
+}
+
+//################### Template: Vault #########################
+module Vault_Template {
+
+  type ImmutableState = Struct [
+    owner: Address,
+    totalAmount: CoinAmount,
+    initialUnlockAmount: CoinAmount,
+    vestingStart: LayerHeight,
+    vestingEnd: LayerHeight
+  ]
+
+  fun spend(recipient: Address, amount: CoinAmount);
+
+}
+
+//################### Template: VestingWallet #########################
+module VestingWallet_Template {
+
+  type ImmutableState = Struct [
+    publicKeys: Seq[Ed25519PublicKey],
+    requiredNumberOfSignatures: Byte,
+  ]
+
+  type SelfSpawn_Payload = Struct [
+    gasPrice: GasPrice,
+    immutableState: ImmutableState,
+    signatures: Seq[Ed25519Sig]
+  ];
+
+  type Spawn_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    template: Address,
+    immutableState: PrefixedWrapper,
+    signatures: Ed25519Sig
+  ];
+
+  type LocalMethodCall_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    signatures: Map[Byte, Ed25519Sig]
+  ];
+
+  fun spend(recipient: Address, amount: CoinAmount);
+
+  fun drainVault(recipient: Address, amount: CoinAmount);
+
+}

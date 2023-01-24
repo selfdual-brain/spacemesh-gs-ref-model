@@ -24,5 +24,6 @@ object TemplateMethodVisibility {
    * Callable by clients and from other accounts.
    * @param selector numeric id of this method (between 0 and 255)
    */
-  class api(selector: Int) extends TemplateMethodVisibility
+  class public(selector: Int) extends TemplateMethodVisibility
+
 }

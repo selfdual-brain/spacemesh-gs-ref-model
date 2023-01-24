@@ -37,8 +37,8 @@ abstract class Account[S](address: AccountAddress, flavor: AccountFlavor, immuta
     host.transfer(destination, amount)
   }
 
-  @api(selector = 4) @query
-  def balance(): Ether = host.balance()
+  @public(selector = 4) @query
+  def balance(): Ether = ???
 
   protected def abortTransaction(msg: String): Unit = {
     throw new TxAbort(address, msg)

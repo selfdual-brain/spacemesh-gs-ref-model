@@ -1,0 +1,79 @@
+//globally known types
+
+Ed25519PublicKey
+Ed25519PrivateKey
+Ed25519Sig
+Address
+GasPrice
+CoinAmount
+LayerHeight
+Nonce
+TypeDef
+
+GlobalState = Struct [
+    templates: Map[Address, Template],
+    stubs: Map[Address, Stub],
+    accounts: Map[Address, Account],
+    templateOwnership: Map[Address, Address]
+]
+
+Template = Struct [
+    isAbstract: Boolean,
+    flavor: Option[AccountFlavor],
+    namespace: String,
+    parent: Option[Address],
+    importedNamespaces: Seq[ImportedNamespaceStatement],
+    definedPublicTypes: Seq[TypeDef],
+    definedPrivateTypes: Seq[TypeDef],
+    immutableState: Map[String, TypeDef],
+    mutableState: Map[String, TypeDef],
+    constructorArguments: Seq[Argument],
+    aggregatedInstances: Map[String, Address],
+    methods: Map[String, MethodDef],
+    isSpawnAllowed: Option[Boolean],
+    isDeployAllowed: Option[Boolean],
+    isForeignCallAllowed: Option[Boolean]
+]
+
+AccountFlavor = Union [
+    singleton Service,
+    singleton Basic,
+    singleton Power
+]
+
+ImportedNamespaceStatement = Struct [
+    namespacePrefix: Option[String],
+    template: Address
+]
+
+Argument= Struct [
+    name: String,
+    type: TypeDef
+]
+
+TxForm = Union [
+    singleton NormalSpawn,
+    singleton SelfSpawn,
+    singleton LocalMethodCall,
+    singleton ForeignMethodCall,
+    singleton TemplateDeploy
+]
+
+MethodDef = Struct [
+    name: String,
+    visibility: MethodVisibility
+    selector: u32,
+    input: TypeDef,
+    output: TypeDef,
+    body: Bytecode
+]
+
+MethodVisibility = Union [
+    singleton Template,
+    singleton Internal,
+    singleton Local,
+    singleton Public
+]
+
+
+

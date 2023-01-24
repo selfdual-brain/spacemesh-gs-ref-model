@@ -4,8 +4,9 @@ import io.spacemesh.blockchain.svm.Account
 import io.spacemesh.blockchain.Ether
 
 /**
- * Holds together an account instance and (mutable) balance.
+ * Holds together an account instance and its coin balance.
  */
 class AccountMutationHolder[S](account: Account[S]) {
-  var balance: Ether = 0
+  var businessPurseBalance: Ether = 0
+  var gasPurseBalance: Ether = 0
 }

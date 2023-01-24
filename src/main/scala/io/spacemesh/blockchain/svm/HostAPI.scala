@@ -1,8 +1,7 @@
 package io.spacemesh.blockchain.svm
 
+import io.spacemesh.blockchain.{Ether, Gas, LayerId}
 import io.spacemesh.blockchain.transactions.Nonce
-import io.spacemesh.blockchain.Ether
-import io.spacemesh.blockchain.LayerId
 
 /**
  * API of the "host" (i.e. the smart contracts execution engine) exposed to every smart contract.
@@ -67,20 +66,38 @@ trait HostAPI {
   def balance(): Ether
 
   /**
-   * Current balance of GasPurse.
+   * Current gas reserve balance of the caller.
    */
-  def gasPaymentsReserve(): Ether
+  def gasReserve(): Ether
 
   /**
-   * Transfers given amount from BusinessPurse to GasPurse.
+   * Value of the gas meter (for the current transaction).
+   *
+   * @return
    */
-  def increaseGasPaymentsReserve(amount: Ether): Ether
+  def gasMeter(): Gas
 
   /**
-   * Schedules withdrawal from GasPurse.
-   * Caution: this will be executed as deferred operation (via withdrawals queue).
+   * Increases gas reserve of the caller by spending given amount of ether from caller's balance.
    */
-  def decreaseGasPaymentsReserve(amount: Ether): Ether
+  def purchaseGasReserve(amount: Ether): Unit
+
+  /**
+   * Increases gas reserve of the caller by pretending that the current transaction did more computation.
+   * This will be then paid by the sponsor of the current transaction.
+   *
+   * @param amount
+   */
+  def accumulateGasReserve(amount: Gas): Unit
+
+  /**
+   * Burns specified amount from caller's gas reserve.
+   * This decreases the gas counter of currently executing transaction.
+   * If the counter value is less than maxAmount, only the required fraction of gas reserve is burned (so that gas counter will be zero).
+   *
+   * @param amount
+   */
+  def burnGasReserve(maxAmount: Gas): Unit
 
   /**
    * Current nonce value of the caller.
@@ -93,7 +110,7 @@ trait HostAPI {
   def rootPrincipal(): AccountAddress
 
   /**
-   * Because inter-contract calls are possible, at at point along the execution of a transaction
+   * Because inter-contract calls are possible, at any point along the execution of a transaction
    * we have a call stack snapshot. Every entry in this call stack is a method at some account.
    * The call stack mapped to (account, method-selector) is the collection returned by this method.
    * The first element of the collection corresponds to the bottom of the call stack.
