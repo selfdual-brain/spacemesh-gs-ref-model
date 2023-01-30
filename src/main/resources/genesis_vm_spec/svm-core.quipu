@@ -55,7 +55,22 @@ module svm_core imports commons, transactions, global_state {
 
   }
 
-  //Host API (method that VM exposes to template developers).
+  //Methods exposed by the VM that are available to TemplateMountAPI implementations
+  interface TemplateMountSocket {
+    //validates Ed25519 signature
+    fun signatureValidation(data: Wrapper, publicKey: Ed25519PublicKey, signature: Ed25519Sig)
+
+    //calculates platform default hash from given sequence of values
+    //elements of the sequence are individually serialized, then concatenated, then hashed with Blake-3 algorithm
+    //Blake-3 reference: https://github.com/BLAKE3-team/BLAKE3/
+    fun cryptoHashPure(values: Seq[Any]): Hash
+
+    //same as cryptoHashPure(values: Seq[Any]) but implicitly adds the Version Information Metadata
+    //as first element of the list (before hashing)
+    fun cryptoHashWithVIM(values: Seq[Any]): Hash
+  }
+
+  //Host API (methods that VM exposes to template developers).
   interface HostAPI {
 
     //transfers specified amount of native coin (smesh) to specified account

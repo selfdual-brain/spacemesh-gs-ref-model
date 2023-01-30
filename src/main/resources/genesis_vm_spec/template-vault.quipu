@@ -12,7 +12,7 @@ module Vault_Template imports common, svm_core, transactions {
     drainedSoFar: CoinAmount
   ]
 
-  behaviour Mount implements TemplateMountAPI[ImmutableState,MutableState] {
+  behaviour Mount(vm: TemplateMountSocket) implements TemplateMountAPI[ImmutableState,MutableState] {
 
     fun parsePayload(tx: Transaction): ParsedPayload throws ParsingError {
       switch typeOf(tx) {
