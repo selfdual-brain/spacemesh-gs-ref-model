@@ -102,11 +102,17 @@ module MultiSigWallet_Template imports common, svm_core, transactions {
     }
   }
 
-  module instance_methods {
+  interface InstanceMethods {
 
     @methodSelector=16
     @maxSpend={amount}
-    fun spend(recipient: Address, amount: CoinAmount) {
+    fun spend(recipient: Address, amount: CoinAmount): void
+
+  }
+
+  behaviour AccountImpl(hostAPI: HostAPI, publicKeys: Seq[Ed25519PublicKey], requiredNumberOfSignatures: Byte) implements InstanceMethods {
+
+    fun spend(recipient: Address, amount: CoinAmount): void {
       hostAPI.transfer(recipient, amount)
     }
 

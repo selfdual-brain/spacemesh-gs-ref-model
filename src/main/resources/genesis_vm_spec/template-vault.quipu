@@ -51,26 +51,34 @@ module Vault_Template imports common, svm_core, transactions {
     }
   }
 
+  interface InstanceMethods {
 
-  module instance_methods {
+    @methodSelector=16
+    @maxSpend=0
+    fun spend(recipient: Address, amount: CoinsAmount): CoinAmount
+
+  }
+
+  behaviour AccountImpl(hostAPI: HostAPI, owner: Address, totalAmount: CoinAmount, initialUnlockAmount: CoinAmount, vestingStart: LayerHeight, vestingEnd: LayerHeight) implements InstanceMethods {
+    var drainedSoFar: CoinAmount
 
     @private
-    fun availableToUnlock(): CoinsAmount = {
+    fun availableToUnlock(): CoinAmount = {
       if (hostAPI.layerId() < vestingStart
         return 0
 
       if (hostAPI.layerId() >= vestingEnd)
         return totalAmount
 
-      val vestingPeriodLength = vestingEnd - vestingStart
-      val relativeBlockchainTime = hostAPI.layerId() - vestingStart
-      val tailAmount = totalAmount - initialUnlockAmount
+      val vestingPeriodLength: u32 = vestingEnd - vestingStart
+      val relativeBlockchainTime: u32 = hostAPI.layerId() - vestingStart
+      val tailAmount: CoinAmount = totalAmount - initialUnlockAmount
       //because we do integer division below and all numbers are non-negative, this rounds towards zero
       val incrementalUnlock: CoinsAmount = tail * relativeBlockchainTime / vestingPeriodLength
       return initialUnlockAmount + incrementalUnlock
     }
 
-    fun spend(recipient: Address, amount: CoinsAmount): CoinsAmount = {
+    fun spend(recipient: Address, amount: CoinAmount): CoinAmount = {
       if (availableToUnlock() - drainedSoFar) > amount
         throw new Error
 
