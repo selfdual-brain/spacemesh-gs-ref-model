@@ -47,6 +47,12 @@ module svm_core imports commons, transactions, global_state {
     //returns the initial shape of the mutable state for the newly created account
     //remark: this conceptually corresponds to what a constructor does in object-oriented programming languages
     fun accountCreationHandler(accountAddress: Address, immutableState: IS, creator: Account): MS
+
+    //performs inter-account call authorization
+    //returns true if this call should be accepted
+    //returns true if this call should be refused
+    fun authorizeCall(enclosingTransaction: Transaction, caller: Address, method: u16, args: T): Boolean
+
   }
 
   //Host API (method that VM exposes to template developers).
@@ -57,13 +63,17 @@ module svm_core imports commons, transactions, global_state {
 
     //executes call of specified instance method on target account
     //(it is allowed that target account equals to calling account)
+    //caution: this call is subject to authorization (on the side of the called account) and so can be rejected
     fun call[T,R](targetAccount: Address, method: u16, args: T): R
 
     //current balance of the caller account
-    fun balance(): CoinAmount;
+    fun balance(): CoinAmount
+
+    //returns template of given account
+    fun templateOf(account: Address): Address
 
     //layer id (=height) of the blockchain block including the currently executing transaction
-    fun layerId(): u64;
+    fun layerId(): u64
 
     //current nonce of the caller account
     fun nonce(): Nonce

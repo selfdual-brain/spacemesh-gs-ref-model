@@ -68,6 +68,10 @@ module SingleSigWallet_Template imports common, svm_core, transactions {
       //no special processing here
       return MutableState()
     }
+
+    fun authorizeCall(enclosingTransaction: Transaction, caller: Address, method: u16, args: T): Boolean {
+      return false
+    }
   }
 
   interface InstanceMethods {

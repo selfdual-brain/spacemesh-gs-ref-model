@@ -49,6 +49,11 @@ module Vault_Template imports common, svm_core, transactions {
       //no special processing here
       return MutableState()
     }
+
+    fun authorizeCall(enclosingTransaction: Transaction, caller: Address, method: u16, args: T): Boolean {
+      return caller == owner
+    }
+
   }
 
   interface InstanceMethods {
@@ -60,7 +65,7 @@ module Vault_Template imports common, svm_core, transactions {
   }
 
   behaviour AccountImpl(hostAPI: HostAPI, owner: Address, totalAmount: CoinAmount, initialUnlockAmount: CoinAmount, vestingStart: LayerHeight, vestingEnd: LayerHeight) implements InstanceMethods {
-    var drainedSoFar: CoinAmount
+    var drainedSoFar: CoinAmount = 0
 
     @private
     fun availableToUnlock(): CoinAmount = {
@@ -79,8 +84,8 @@ module Vault_Template imports common, svm_core, transactions {
     }
 
     fun spend(recipient: Address, amount: CoinAmount): CoinAmount = {
-      if (availableToUnlock() - drainedSoFar) > amount
-        throw new Error
+      if amount > (availableToUnlock() - drainedSoFar)
+        throw Error("requested amount exceeds currently available unlocked balance")
 
       drainedSoFar = drainedSoFar + amount
       hostApi.transfer(recipient, amount)

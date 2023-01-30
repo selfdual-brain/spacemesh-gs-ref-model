@@ -100,6 +100,11 @@ module MultiSigWallet_Template imports common, svm_core, transactions {
 
       return MutableState()
     }
+
+    fun authorizeCall(enclosingTransaction: Transaction, caller: Address, method: u16, args: T): Boolean {
+      return false
+    }
+
   }
 
   interface InstanceMethods {
