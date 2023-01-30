@@ -130,12 +130,13 @@ module svm {
     fun parseImmutableState(wrapper: Wrapper): IS throws ParsingError;
 
     //parsing of method call arguments
-    fun parseCallArgs[T](methodSelector: Int, wrapper: Wrapper): T
+    fun parseCallArgs[T](methodSelector: u16, wrapper: Wrapper): T
 
     //list instance methods available in this template
     fun instanceMethods(): Seq[u16]
 
     //returns signature of a given instance method defined by this template
+    //throws en exception if such a method is not defined
     fun methodSignature(methodId: u16): InstanceMethodSignature
 
     //initial processing to be done at instance creation
@@ -184,7 +185,16 @@ module svm {
   }
 
   //Encapsulates the process of a single transaction execution
+  //We abstract transforming the global state - possibly several times.
   interface TxExecutionProcess {
+    //global state on top of which this execution process has started
+    fun initialGlobalState(): GlobalState
+
+    //latest global state achieved by working of this execution process
+    fun globalState(): GlobalState
+
+    //performs transition of global state (i.e. sets given global state as current)
+    fun transition(newGlobalState: GlobalState): void
 
     //retrieves mount API of given template)
     fun getMountAPI[T](template: Address): T
@@ -195,7 +205,7 @@ module svm {
 
     //estimates the gas consumption of given transaction, if it will be executed
     //caution: in Genesis-SVM there is no "real" gas metering and these estimates are the actual way of calculating gas for transactions
-    fun fixedGas(tx: Transaction): Gas
+    fun estimateGas(tx: Transaction): Gas
 
     //calculates platform default hash from given sequence of values
     //elements of the sequence are individually serialized, then concatenated, then hashed with Blake-3 algorithm
@@ -206,14 +216,18 @@ module svm {
     //as first element of the list (before hashing)
     fun cryptoHashWithVIM(values: Seq[Any]): Hash
 
-    //================= executes self-spawn transaction =================
-    fun execSelfSpawn(globalState: GlobalState, tx: SelfSpawnTx): GlobalState {
-      //remembering gas metering counter value at the beginning of exec processing
-      val gasAtBeginning: Gas = vm.gasCounterValue()
+    //Invokes instance method on given account. Arguments:
+    //  account: address of the target account
+    //  method: method selector
+    //  args: arguments
+    //This execution leads to a new global state, which is then set as the new current global state.
+    fun callInstanceMethod[T,R](account: Address, method: u16, args: T): R
 
+    //================= executes self-spawn transaction =================
+    fun execSelfSpawn(tx: SelfSpawnTx): Void {
       //checking correctness of provided template address
       //the new account will the an instance of this template
-      val template: Template = switch globalState.get(tx.template) {
+      val template: Template = switch self.globalState().get(tx.template) {
         case None: throw Error("template not found")
         case Some(template: Template): template
         case Some(stub: Stub): throw Error("expected a template, found a stub")
@@ -221,7 +235,7 @@ module svm {
       }
 
       //retrieving API of this template
-      val templateAPI: TemplateAPI[IS,MS] = self.getAPI(template)
+      val templateAPI: TemplateAPI[IS,MS] = self.getMountAPI(template)
 
       //parsing the payload part of transaction (template-specific parsing is applied here)
       val parsedPayload: ParsedPayload = templateAPI.parsePayload(tx.payload)
@@ -235,10 +249,10 @@ module svm {
       }
 
       //calculating principal's address
-      val principal: Address = self.cryptoHash(Seq(tx.template, parsedPayload.callArgs))
+      val principal: Address = self.cryptoHashPure(Seq(tx.template, parsedPayload.callArgs))
 
       //account at this address must be a stub for self-spawn to be successful
-      val stubBalance: CoinAmount = switch globalState.get(principal) {
+      val stubBalance: CoinAmount = switch self.globalState().get(principal) {
         case None: throw Error("stub not found: $principal")
         case Some(template: Template): throw Error("expected a stub, found a template: address=$principal")
         case Some(stub: Stub): stub.balance
@@ -259,8 +273,7 @@ module svm {
       val initialShapeOfMutableState: MS = templateAPI.accountCreationHandler(principal, parsedImmutableState, principal)
 
       //instead of real gas metering we use hardcoded-gas table in Genesis-SVM
-      //val gasConsumed: Gas = vm.gasCounterValue() - gasAtBeginning
-      val gasConsumed: Gas = self.fixedGas(tx, parsedPayload)
+      val gasConsumed: Gas = self.estimateGas(tx, parsedPayload)
 
       //aborting if consumed gas exceeds max gas (max gas was declared by the transaction)
       if (gasConsumed > parsedPayload.maxGas) {
@@ -278,17 +291,13 @@ module svm {
       )
 
       //creating new global state with the entry at principal address updated (stub -> account state)
-      val newGlobalState: GlobalState = globalState.addOrReplace(principal -> newAccount)
-      return newGlobalState
+      self.transition(self.globalState().addOrReplace(principal -> newAccount))
     }
 
     //================= executes spawn transaction ===================
-    fun execSpawn(globalState: GlobalState, tx: SpawnTx): GlobalState {
-      //remembering gas metering counter value at the beginning of exec processing
-      val gasAtBeginning: Gas = vm.gasCounterValue()
-
+    fun execSpawn(tx: SpawnTx): void {
       //checking if principal is already existing in the global state
-      val principalAccount: Account[ISP, MSP] = switch globalState.get(tx.principal) {
+      val principalAccount: Account[ISP, MSP] = switch self.globalState().get(tx.principal) {
         case None: throw Error("account not found: ${tx.principal}")
         case Some(template: Template): throw Error("expected an account, found a template")
         case Some(stub: Stub): throw Error("expected an account, found a stub")
@@ -297,7 +306,7 @@ module svm {
 
       //checking correctness of provided template address
       //the new account will the an instance of this template
-      val newAccountTemplate: Template = switch globalState.get(tx.template) {
+      val newAccountTemplate: Template = switch self.globalState().get(tx.template) {
         case None: throw Error("template not found")
         case Some(template: Template): template
         case Some(stub: Stub): throw Error("expected template, found a stub")
@@ -305,10 +314,10 @@ module svm {
       }
 
       //retrieving API of new account's template
-      val newAccountTemplateAPI: TemplateAPI[ISA,MSA] = self.getAPI(newAccountTemplate)
+      val newAccountTemplateAPI: TemplateAPI[ISA,MSA] = self.getMountAPI(newAccountTemplate)
 
       //retrieving API of principal's template
-      val principalTemplateAPI: TemplateAPI[ISP, MSP] = principalAccount.template
+      val principalTemplateAPI: TemplateAPI[ISP, MSP] = self.getMountAPI(principalAccount.template)
 
       //parsing the payload part of transaction (template-specific parsing is applied here)
       val parsedPayload: ParsedPayload = principalTemplateAPI.parsePayload(tx.payload)
@@ -319,14 +328,13 @@ module svm {
       }
 
       //tx nonce check
-      //Genesis-SVM uses fixed nonce algorithm ("counter with gaps")
-      //nonce customization is to be introduced in Full-SVM
+      //Caution: Genesis-SVM uses fixed nonce algorithm ("counter with gaps"); nonce customization is to be introduced in Full-SVM
       if (parsedPayload.nonce <= principalAccount.nonce) {
         throw Error("nonce mismatch: account-nonce = ${account.nonce} tx-nonce=${payload.nonce}")
       }
 
-      //calculating the address of new account
-      val addressOfNewAccount: Address = self.cryptoHash(Seq(tx.template, parsedPayload.callArgs))
+      //calculating the address of the new account
+      val addressOfNewAccount: Address = self.cryptoHashPure(Seq(tx.template, parsedPayload.callArgs))
 
       //account at this address must not be initialized yet
       val stubBalance: CoinAmount = switch globalState.get(addressOfNewAccount) {
@@ -352,7 +360,7 @@ module svm {
 
       //instead of real gas metering we use hardcoded-gas table in Genesis-SVM
       //val gasConsumed: Gas = self.gasCounterValue() - gasAtBeginning
-      val gasConsumed: Gas = self.fixedGas(tx, parsedPayload)
+      val gasConsumed: Gas = self.estimateGas(tx, parsedPayload)
 
       //aborting if consumed gas exceeds max gas (max gas was declared by the transaction)
       if (gasConsumed > parsedPayload.maxGas) {
@@ -370,28 +378,25 @@ module svm {
       )
 
       //updating principal account (nonce and balance)
-      val updatedPrincipalAccount: Account[ISP,MSP] = Account[ISP,MSP]{
+      val updatedPrincipalAccount: Account[ISP,MSP] = Account[ISP,MSP](
           template = principalAccount.template,
           nonce = parsedPayload.nonce,
           balance = principalAccount.balance - gasConsumed * parsedPayload.gasPrice,
           immutableState = principalAccount.immutableState,
           mutableState = principalAccount.mutableState
-      }
+      )
 
       //creating new global state with both new account and principal account entries updated
       val newGlobalState: GlobalState = globalState.addOrReplace(addressOfNewAccount -> newAccount)
-                                                   .addOrReplace(principal -> updatedPrincipalAccount)
+                                                   .addOrReplace(tx.principal -> updatedPrincipalAccount)
 
-      return newGlobalState
+      self.transition(newGlobalState)
     }
 
     //================= executes local-method-call transaction =============
-    fun execLocalMethodCall(globalState: GlobalState, tx: LocalMethodCallTx): GlobalState {
-      //remembering gas metering counter value at the beginning of exec processing
-      val gasAtBeginning: Gas = self.gasCounterValue()
-
+    fun execLocalMethodCall(tx: LocalMethodCallTx): void {
       //checking if principal is already existing in the global state
-      val principalAccount: Account[ISP, MSP] = switch globalState.get(tx.principal) {
+      val principalAccount: Account[ISP, MSP] = switch self.globalState().get(tx.principal) {
         case None: throw Error("account not found: ${tx.principal}")
         case Some(template: Template): throw Error("expected an account, found a template")
         case Some(stub: Stub): throw Error("expected an account, found a stub")
@@ -399,7 +404,7 @@ module svm {
       }
 
       //retrieving API of principal's template
-      val principalTemplateAPI: TemplateAPI[ISP, MSP] = principalAccount.template
+      val principalTemplateAPI: TemplateAPI[ISP, MSP] = self.getMountAPI(principalAccount.template)
 
       //parsing the payload part of transaction (template-specific parsing is applied here)
       val parsedPayload: ParsedPayload = principalTemplateAPI.parsePayload(tx.payload)
@@ -410,8 +415,7 @@ module svm {
       }
 
       //tx nonce check
-      //Genesis-SVM uses fixed nonces algorithm ("counter with gaps")
-      //nonce customization is to be introduced in Full-SVM
+      //Caution: Genesis-SVM uses fixed nonce algorithm ("counter with gaps"); nonce customization is to be introduced in Full-SVM
       if (parsedPayload.nonce <= principalAccount.nonce) {
         throw Error("nonce mismatch: account-nonce = ${account.nonce} tx-nonce=${payload.nonce}")
       }
@@ -426,24 +430,60 @@ module svm {
 
       //instead of real gas metering we use hardcoded-gas table in Genesis-SVM
       //val gasConsumed: Gas = self.gasCounterValue() - gasAtBeginning
-      val gasConsumed: Gas = self.fixedGas(tx, parsedPayload)
+      val gasConsumed: Gas = self.estimateGas(tx, parsedPayload)
 
       //aborting if consumed gas exceeds max gas (max gas was declared by the transaction)
       if (gasConsumed > parsedPayload.maxGas) {
         throw Error("exceeded max gas")
       }
 
+      //checking if required method is defined by the corresponding template
+      if (! principalTemplateAPI.instanceMethods().contains(tx.methodSelector)) {
+        throw Error("instance method ${tx.methodSelector} not defined for account ${tx.principal} with template ${principalAccount.template}")
+      }
+
+      //parsing call arguments
+      val parsedCallArgs: T = principalTemplateAPI.parseCallArgs(tx.methodSelector, tx.callArgs)
 
 
+      //updating principal account (nonce and balance)
+      //caution: here we apply the payment for the whole maxGas (this is required for compatibility with future Full-SVM semantics)
+      val ps1: Account[ISP,MSP] = Account[ISP,MSP](
+          template = principalAccount.template,
+          nonce = parsedPayload.nonce,
+          balance = principalAccount.balance - parsedPayload.maxGas * parsedPayload.gasPrice,
+          immutableState = principalAccount.immutableState,
+          mutableState = principalAccount.mutableState
+      )
 
+      //creating new global state with both new account and principal account entries updated
+      val gs1: GlobalState = globalState.addOrReplace(principal -> ps1)
+      self.transition(gs1)
 
+      //executing method call
+      //caution 1: call result is deliberately ignored
+      //caution 2: notice that here another global state transition happens
+      self.callInstanceMethod(tx.principal, tx.methodSelector, parsedCallArgs)
 
+      //if the actual consumption of gas was less then maxGas then we process pay-back here
+      //caution: because real gas metering is not working in Genesis-SVM, we use gasConsumed value from the estimation, not from the actual metering
+      if (gasConsumed < parsedPayload.maxGas) {
+        val principalBalanceAfterCall: CoinAmount = self.globalState().get(tx.principal).balance
+        val principalMutableStateAfterCall: MSP = self.globalState().get(tx.principal).mutableState
+        val payback: CoinAmount = (parsedPayload.maxGas - gasConsumed) * parsedPayload.gasPrice
+        val ps2: Account[ISP,MSP] = Account[ISP,MSP](
+            template = principalAccount.template,
+            nonce = parsedPayload.nonce,
+            balance = principalBalanceAfterCallWasExecuted + payback,
+            immutableState = principalAccount.immutableState,
+            mutableState = principalMutableStateAfterCall
+        )
+        self.transition(globalState.addOrReplace(tx.principal -> ps2))
+      }
     }
 
   }
-
 }
-
 
 //################### Template: SingleSigWallet #########################
 module SingleSigWallet_Template imports common {
