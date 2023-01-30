@@ -131,5 +131,4 @@ module VestingWallet_Template imports common, svm_core, transactions {
 
   }
 
-
 }
