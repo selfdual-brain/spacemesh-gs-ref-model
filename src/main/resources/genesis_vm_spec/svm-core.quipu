@@ -20,17 +20,17 @@ module svm_core imports commons, transactions, global_state {
   //Template mount API (callback methods that a template exposes to the VM so that the VM knows how to use this template).
   interface TemplateMountAPI[IS,MS] {
     //performs parsing of template-specific part of a transaction
-    fun parsePayload(tx: Transaction): ParsedPayload throws ParsingError;
+    fun parsePayload(tx: Transaction): ParsedPayload throws ParsingError
 
     //(for a given transaction) declares the limit of outgoing transfers sum
-    fun maxSpend(methodSelector: Int, accountImmutableState: IS, parsedPayload: ParsedPayload): CoinAmount;
+    fun maxSpend(methodSelector: Int, accountImmutableState: IS, parsedPayload: ParsedPayload): CoinAmount
 
     //template-specific authentication of a transaction
     //remark: this is the way transaction signatures checking is done (and therefore can be customized) in SVM
-    fun verifyTx(accountImmutableState: IS, txSerialized: Wrapper, tx: Transaction, parsedPayload: ParsedPayload): Boolean;
+    fun verifyTx(accountImmutableState: IS, txSerialized: Wrapper, tx: Transaction, parsedPayload: ParsedPayload): Boolean
 
     //parsing of immutable state (which is provided at instance creation)
-    fun parseImmutableState(wrapper: Wrapper): IS throws ParsingError;
+    fun parseImmutableState(wrapper: Wrapper): IS throws ParsingError
 
     //parsing of method call arguments
     fun parseCallArgs[T](methodSelector: u16, wrapper: Wrapper): T
@@ -68,9 +68,6 @@ module svm_core imports commons, transactions, global_state {
 
     //current balance of the caller account
     fun balance(): CoinAmount
-
-    //returns template of given account
-    fun templateOf(account: Address): Address
 
     //layer id (=height) of the blockchain block including the currently executing transaction
     fun layerId(): u64
