@@ -1,0 +1,11 @@
+module common {
+  type Ed25519PublicKey = Array[Byte](32);
+  type Ed25519PrivateKey = Array[Byte](64);
+  type Ed25519Sig = Array[Byte](64);
+  type Address = Array[Byte](24);
+  type GasPrice = u64;
+  type CoinAmount = u64;
+  type LayerHeight = u32;
+  type Nonce = u64;
+  type Hash = Array[Byte](256);
+}

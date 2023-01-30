@@ -1,0 +1,32 @@
+module VestingWallet_Template {
+
+  type ImmutableState = Struct [
+    publicKeys: Seq[Ed25519PublicKey],
+    requiredNumberOfSignatures: Byte,
+  ]
+
+  type SelfSpawn_Payload = Struct [
+    gasPrice: GasPrice,
+    immutableState: ImmutableState,
+    signatures: Seq[Ed25519Sig]
+  ];
+
+  type Spawn_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    template: Address,
+    immutableState: PrefixedWrapper,
+    signatures: Ed25519Sig
+  ];
+
+  type LocalMethodCall_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    signatures: Map[Byte, Ed25519Sig]
+  ];
+
+  fun spend(recipient: Address, amount: CoinAmount);
+
+  fun drainVault(recipient: Address, amount: CoinAmount);
+
+}

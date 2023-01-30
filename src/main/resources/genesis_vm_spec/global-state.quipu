@@ -1,0 +1,29 @@
+module global_state imports common {
+
+  type Stub = Struct [
+    balance: CoinAmount
+  ];
+
+  type Account[IS,MS] = Struct [
+    template: Address,
+    nonce: Nonce,
+    creator: Address,
+    balance: CoinAmount,
+    immutableState: IS,
+    mutableState: MS
+  ];
+
+  //Caution: in Genesis-SVM all templates are hardcoded, hence their definitions are not really stored in the global state
+  //This is why the struct below is empty (it will be non-empty in Full-SVM).
+  type Template[IS,MS] = Struct [
+  ]
+
+  type GSCell = Union [
+    Account,
+    Stub,
+    Template
+  ];
+
+  type GlobalState = Map[Address, GSCell];
+
+}

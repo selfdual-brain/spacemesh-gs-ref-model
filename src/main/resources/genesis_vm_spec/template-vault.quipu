@@ -1,0 +1,42 @@
+module Vault_Template {
+
+  type ImmutableState = Struct [
+    owner: Address,
+    totalAmount: CoinAmount,
+    initialUnlockAmount: CoinAmount,
+    vestingStart: LayerHeight,
+    vestingEnd: LayerHeight
+  ]
+
+  type MutableState = Struct [
+    drainedSoFar: CoinAmount
+  ]
+
+  module instance_methods {
+
+    @private
+    fun availableToUnlock(): CoinsAmount = {
+      if (hostAPI.layerId() < vestingStart
+        return 0
+
+      if (hostAPI.layerId() >= vestingEnd)
+        return totalAmount
+
+      val vestingPeriodLength = vestingEnd - vestingStart
+      val relativeBlockchainTime = hostAPI.layerId() - vestingStart
+      val tailAmount = totalAmount - initialUnlockAmount
+      //because we do integer division below and all numbers are non-negative, this rounds towards zero
+      val incrementalUnlock: CoinsAmount = tail * relativeBlockchainTime / vestingPeriodLength
+      return initialUnlockAmount + incrementalUnlock
+    }
+
+    fun spend(recipient: Address, amount: CoinsAmount): CoinsAmount = {
+      if (availableToUnlock() - drainedSoFar) > amount
+        throw new Error
+
+      drainedSoFar = drainedSoFar + amount
+      hostApi.transfer(recipient, amount)
+    }
+  }
+
+}

@@ -1,0 +1,51 @@
+module transactions imports common {
+
+  type Transaction = Union [
+    SelfSpawnTx,
+    SpawnTx,
+    LocalMethodCallTx,
+    ForeignMethodCallTx, //not supported in Genesis version of Spacemesh
+    TemplateDeployTx //not supported in Genesis version of Spacemesh
+  ];
+
+  type SelfSpawnTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 0,
+    template: Address,
+    payload: TailWrapper
+  ];
+
+  type SpawnTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 1,
+    principal: Address,
+    template: Address,
+    payload: TailWrapper
+  ];
+
+  type LocalMethodCallTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 2,
+    principal: Address,
+    methodSelector: uint16,
+    payload: TailWrapper
+  ];
+
+  type ForeignMethodCallTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 3,
+    principal: Address,
+    targetAccount: Address,
+    methodSelector: uint16,
+    payload: TailWrapper
+  ];
+
+  type TemplateDeployTx = Struct [
+    protocolVersion: Byte,
+    txType: Byte = 4,
+    principal: Address,
+    expectedTemplateAddress: Address,
+    templateDefinition: TailWrapper
+  ];
+
+}
