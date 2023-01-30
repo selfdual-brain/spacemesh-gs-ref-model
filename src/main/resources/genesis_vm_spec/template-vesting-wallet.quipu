@@ -1,4 +1,4 @@
-module VestingWallet_Template {
+module VestingWallet_Template imports common, svm_core, transactions {
 
   type ImmutableState = Struct [
     publicKeys: Seq[Ed25519PublicKey],

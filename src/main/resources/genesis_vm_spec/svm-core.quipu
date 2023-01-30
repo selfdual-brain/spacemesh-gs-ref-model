@@ -1,4 +1,4 @@
-module svm_core {
+module svm_core imports commons, transactions, global_state {
 
   type ParsedPayload[T] = Struct [
     callArgs: Wrapper
