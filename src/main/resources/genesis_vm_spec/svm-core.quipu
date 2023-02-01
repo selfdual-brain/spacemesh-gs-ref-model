@@ -483,10 +483,17 @@ module svm_core imports commons, transactions, global_state {
       val gs1: GlobalState = globalState.addOrReplace(principal -> ps1)
       self.transition(gs1)
 
+      //authorization of this call on the side of target account
+      val interAccountCallApprovalOK: Boolean = self.authorizeCall(tx, tx.principal, tx.methodSelector, parsedCallArgs)
+
+      if (! interAccountCallApprovalOK) {
+        throw Error("call auth was negative: target account ${tx.targetAccount} refused to authorize invoking method ${tx.methodSelector} on behalf of ${tx.principal}")
+      }
+
       //executing method call
       //caution 1: call result is deliberately ignored
       //caution 2: notice that here another global state transition happens
-      self.callInstanceMethod(tx.principal, tx.methodSelector, parsedCallArgs)
+      self.callInstanceMethod(tx.targetAccount, tx.methodSelector, parsedCallArgs)
 
       //if the actual consumption of gas was less then maxGas then we process pay-back here
       //caution: because real gas metering is not working in Genesis-SVM, we use gasConsumed value from the estimation, not from the actual metering
