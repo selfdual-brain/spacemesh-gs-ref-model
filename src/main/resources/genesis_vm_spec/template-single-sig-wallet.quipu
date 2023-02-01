@@ -31,7 +31,18 @@ module SingleSigWallet_Template imports common, svm_core, transactions {
 
     fun parsePayload(tx: Transaction): ParsedPayload throws ParsingError {
       switch typeOf(tx) {
-        case SelfSpawnTx: Quipu.parse[SelfSpawn_Payload](tx.payload)
+        case SelfSpawnTx:
+          val nativePayload: SelfSpawn_Payload = Quipu.parse[SelfSpawn_Payload](tx.payload)
+          return new ParsedPayload(
+              callArgs =
+              nonce: Nonce,
+              minLayer: Long,
+              maxLayer: Long,
+              maxGas: Gas,
+              gasPrice: GasPrice,
+              nativePayload: T
+          )
+
         case SpawnTx: Quipu.parse[Spawn_Payload](tx.payload)
         case LocalMethodCall: Quipu.parse[LocalMethodCall_Payload](tx.payload)
         case ForeignMethodCallTx: throw Error("Not supported in this version of SVM")

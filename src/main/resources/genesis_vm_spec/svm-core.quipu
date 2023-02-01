@@ -101,7 +101,7 @@ module svm_core imports commons, transactions, global_state {
         case SelfSpawnTx: txBubble.execSelfSpawn(globalState, tx)
         case SpawnTx: txBubble.execSpawn(globalState, tx)
         case LocalMethodCall: txBubble.execLocalMethodCall(globalState, tx)
-        case ForeignMethodCallTx: throw Error("Not supported in this version of SVM")
+        case ForeignMethodCallTx: txBubble.execForeignMethodCall(globalState, tx)
         case TemplateDeployTx: throw Error("Not supported in this version of SVM")
       }
 
@@ -370,6 +370,104 @@ module svm_core imports commons, transactions, global_state {
       //parsing call arguments
       val parsedCallArgs: T = principalTemplateAPI.parseCallArgs(tx.methodSelector, tx.callArgs)
 
+      //updating principal account (nonce and balance)
+      //caution: here we apply the payment for the whole maxGas (this is required for compatibility with future Full-SVM semantics)
+      val ps1: Account[ISP,MSP] = Account[ISP,MSP](
+          template = principalAccount.template,
+          nonce = parsedPayload.nonce,
+          balance = principalAccount.balance - parsedPayload.maxGas * parsedPayload.gasPrice,
+          immutableState = principalAccount.immutableState,
+          mutableState = principalAccount.mutableState
+      )
+
+      //creating new global state with both new account and principal account entries updated
+      val gs1: GlobalState = globalState.addOrReplace(principal -> ps1)
+      self.transition(gs1)
+
+      //executing method call
+      //caution 1: call result is deliberately ignored
+      //caution 2: notice that here another global state transition happens
+      self.callInstanceMethod(tx.principal, tx.methodSelector, parsedCallArgs)
+
+      //if the actual consumption of gas was less then maxGas then we process pay-back here
+      //caution: because real gas metering is not working in Genesis-SVM, we use gasConsumed value from the estimation, not from the actual metering
+      if (gasConsumed < parsedPayload.maxGas) {
+        val principalBalanceAfterCall: CoinAmount = self.globalState().get(tx.principal).balance
+        val principalMutableStateAfterCall: MSP = self.globalState().get(tx.principal).mutableState
+        val payback: CoinAmount = (parsedPayload.maxGas - gasConsumed) * parsedPayload.gasPrice
+        val ps2: Account[ISP,MSP] = Account[ISP,MSP](
+            template = principalAccount.template,
+            nonce = parsedPayload.nonce,
+            balance = principalBalanceAfterCallWasExecuted + payback,
+            immutableState = principalAccount.immutableState,
+            mutableState = principalMutableStateAfterCall
+        )
+        self.transition(globalState.addOrReplace(tx.principal -> ps2))
+      }
+    }
+
+    //================= executes foreign-method-call transaction =============
+    fun execForeignMethodCall(tx: LocalMethodCallTx): void {
+      //checking if principal is already existing in the global state
+      val principalAccount: Account[ISP, MSP] = switch self.globalState().get(tx.principal) {
+        case None: throw Error("account not found: ${tx.principal}")
+        case Some(template: Template): throw Error("expected an account, found a template")
+        case Some(stub: Stub): throw Error("expected an account, found a stub")
+        case Some(account: Account): account
+      }
+
+      //retrieving API of principal's template
+      val principalTemplateAPI: TemplateAPI[ISP, MSP] = self.getMountAPI(principalAccount.template)
+
+      //parsing the payload part of transaction (template-specific parsing is applied here)
+      val parsedPayload: ParsedPayload = principalTemplateAPI.parsePayload(tx.payload)
+
+      //tx signatures check (template-specific)
+      if (! principalTemplateAPI.verifyTx(principalAccount.immutableState, tx, parsedPayload)) {
+        throw Error("invalid tx signature")
+      }
+
+      //tx nonce check
+      //Caution: Genesis-SVM uses fixed nonce algorithm ("counter with gaps"); nonce customization is to be introduced in Full-SVM
+      if (parsedPayload.nonce <= principalAccount.nonce) {
+        throw Error("nonce mismatch: account-nonce = ${account.nonce} tx-nonce=${payload.nonce}")
+      }
+
+      //calculating coin balance required to execute this transaction
+      val requiredBalance: CoinAmount = principalTemplateAPI.maxSpend(tx) + parsedPayload.maxGas * parsedPayload.gasPrice
+
+      //checking if principal account balance can cover this transaction
+      if (principalAccount.balance < requiredBalance) {
+        throw Error("insufficient balance for account: address=${tx.principal}, required amount was: $requiredBalance")
+      }
+
+      //instead of real gas metering we use hardcoded-gas table in Genesis-SVM
+      //val gasConsumed: Gas = self.gasCounterValue() - gasAtBeginning
+      val gasConsumed: Gas = self.estimateGas(tx, parsedPayload)
+
+      //aborting if consumed gas exceeds max gas (max gas was declared by the transaction)
+      if (gasConsumed > parsedPayload.maxGas) {
+        throw Error("exceeded max gas")
+      }
+
+      //checking if target account is already existing in the global state
+      val targetAccount: Account[ISP, MSP] = switch self.globalState().get(tx.targetAccount) {
+        case None: throw Error("account not found: ${tx.targetAccount}")
+        case Some(template: Template): throw Error("expected an account, found a template")
+        case Some(stub: Stub): throw Error("expected an account, found a stub")
+        case Some(account: Account): account
+      }
+
+      //retrieving mount API of target account's template
+      val targetAccountTemplateAPI: TemplateAPI[ISP, MSP] = self.getMountAPI(targetAccount.template)
+
+      //checking if required method is defined
+      if (! targetAccountTemplateAPI.instanceMethods().contains(tx.methodSelector)) {
+        throw Error("instance method ${tx.methodSelector} not defined for account ${tx.targetAccount} with template ${targetAccount.template}")
+      }
+
+      //parsing call arguments
+      val parsedCallArgs: T = targetAccountTemplateAPI.parseCallArgs(tx.methodSelector, tx.callArgs)
 
       //updating principal account (nonce and balance)
       //caution: here we apply the payment for the whole maxGas (this is required for compatibility with future Full-SVM semantics)
@@ -405,6 +503,7 @@ module svm_core imports commons, transactions, global_state {
         )
         self.transition(globalState.addOrReplace(tx.principal -> ps2))
       }
+
     }
 
   }

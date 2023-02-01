@@ -1,3 +1,4 @@
+//Caution: if we implement support for ForeignMethodCallTx in Genesis-SVM, this template is no longer needed (and should be deleted)
 module VestingWallet_Template imports common, svm_core, transactions {
 
   type ImmutableState = Struct [
