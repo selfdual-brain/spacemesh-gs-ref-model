@@ -368,7 +368,7 @@ module svm_core imports commons, transactions, global_state {
       }
 
       //parsing call arguments
-      val parsedCallArgs: T = principalTemplateAPI.parseCallArgs(tx.methodSelector, tx.callArgs)
+      val parsedCallArgs: T = principalTemplateAPI.parseCallArgs(tx.methodSelector, parsedPayload.callArgs)
 
       //updating principal account (nonce and balance)
       //caution: here we apply the payment for the whole maxGas (this is required for compatibility with future Full-SVM semantics)
@@ -467,7 +467,7 @@ module svm_core imports commons, transactions, global_state {
       }
 
       //parsing call arguments
-      val parsedCallArgs: T = targetAccountTemplateAPI.parseCallArgs(tx.methodSelector, tx.callArgs)
+      val parsedCallArgs: T = targetAccountTemplateAPI.parseCallArgs(tx.methodSelector, parsedPayload.callArgs)
 
       //updating principal account (nonce and balance)
       //caution: here we apply the payment for the whole maxGas (this is required for compatibility with future Full-SVM semantics)

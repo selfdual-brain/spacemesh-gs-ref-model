@@ -19,7 +19,7 @@ module Vault_Template imports common, svm_core, transactions {
         case SelfSpawnTx: throw Error("Not supported for this template")
         case SpawnTx: throw Error("Not supported for this template")
         case LocalMethodCall: throw Error("Not supported for this template")
-        case ForeignMethodCallTx: throw Error("Not supported in this version of SVM")
+        case ForeignMethodCallTx: throw Error("Not supported for this template")
         case TemplateDeployTx: throw Error("Not supported in this version of SVM")
       }
     }

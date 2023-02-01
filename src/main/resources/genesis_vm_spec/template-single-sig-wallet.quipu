@@ -9,21 +9,28 @@ module SingleSigWallet_Template imports common, svm_core, transactions {
 
   type SelfSpawn_Payload = Struct [
     gasPrice: GasPrice,
-    immutableState: ImmutableState,
+    immutableStateBlob: PrefixedWrapper,
     signature: Ed25519Sig
   ];
 
   type Spawn_Payload = Struct [
     gasPrice: GasPrice,
     nonce: Nonce,
-    immutableState: PrefixedWrapper,
+    immutableStateBlob: PrefixedWrapper,
     signature: Ed25519Sig
   ];
 
   type LocalMethodCall_Payload = Struct [
     gasPrice: GasPrice,
     nonce: Nonce,
-    methodArgs: PrefixedWrapper,
+    methodArgsBlob: PrefixedWrapper,
+    signature: Ed25519Sig
+  ]
+
+  type ForeignMethodCall_Payload = Struct [
+    gasPrice: GasPrice,
+    nonce: Nonce,
+    methodArgsBlob: PrefixedWrapper,
     signature: Ed25519Sig
   ]
 
@@ -33,19 +40,52 @@ module SingleSigWallet_Template imports common, svm_core, transactions {
       switch typeOf(tx) {
         case SelfSpawnTx:
           val nativePayload: SelfSpawn_Payload = Quipu.parse[SelfSpawn_Payload](tx.payload)
-          return new ParsedPayload(
-              callArgs =
-              nonce: Nonce,
-              minLayer: Long,
-              maxLayer: Long,
-              maxGas: Gas,
-              gasPrice: GasPrice,
-              nativePayload: T
-          )
+          return new ParsedPayload[SelfSpawn_Payload][
+              callArgs = nativePayload.immutableStateBlob,
+              nonce = 0,
+              minLayer = 0,
+              maxLayer = ProtocolConstants.MAX_LAYER,
+              maxGas =  ProtocolConstants.MAX_TX_GAS_ALLOWED,
+              gasPrice = nativePayload.gasPrice,
+              nativePayload = nativePayload
+          ]
 
-        case SpawnTx: Quipu.parse[Spawn_Payload](tx.payload)
-        case LocalMethodCall: Quipu.parse[LocalMethodCall_Payload](tx.payload)
-        case ForeignMethodCallTx: throw Error("Not supported in this version of SVM")
+        case SpawnTx:
+          val nativePayload: Spawn_Payload = Quipu.parse[Spawn_Payload](tx.payload)
+          return new ParsedPayload[Spawn_Payload][
+              callArgs = nativePayload.immutableStateBlob,
+              nonce = nonce,
+              minLayer = 0,
+              maxLayer = ProtocolConstants.MAX_LAYER,
+              maxGas =  ProtocolConstants.MAX_TX_GAS_ALLOWED,
+              gasPrice = nativePayload.gasPrice,
+              nativePayload = nativePayload
+          ]
+
+        case LocalMethodCall:
+          val nativePayload: LocalMethodCall_Payload =  Quipu.parse[LocalMethodCall_Payload](tx.payload)
+          return new ParsedPayload[LocalMethodCall_Payload][
+              callArgs = nativePayload.methodArgsBlob,
+              nonce = nonce,
+              minLayer = 0,
+              maxLayer = ProtocolConstants.MAX_LAYER,
+              maxGas =  ProtocolConstants.MAX_TX_GAS_ALLOWED,
+              gasPrice = nativePayload.gasPrice,
+              nativePayload = nativePayload
+          ]
+
+        case ForeignMethodCallTx:
+          val nativePayload: LocalMethodCall_Payload =  Quipu.parse[ForeignMethodCall_Payload](tx.payload)
+          return new ParsedPayload[LocalMethodCall_Payload][
+              callArgs = nativePayload.methodArgsBlob,
+              nonce = nonce,
+              minLayer = 0,
+              maxLayer = ProtocolConstants.MAX_LAYER,
+              maxGas =  ProtocolConstants.MAX_TX_GAS_ALLOWED,
+              gasPrice = nativePayload.gasPrice,
+              nativePayload = nativePayload
+          ]
+
         case TemplateDeployTx: throw Error("Not supported in this version of SVM")
       }
     }
